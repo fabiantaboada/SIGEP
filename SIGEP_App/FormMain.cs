@@ -58,7 +58,7 @@ namespace SIGEP_App
         public FormMain()
         {
             this.Text = "SIGEP Workspace - Sistema de Gestión Parroquial";
-            this.MinimumSize = new Size(1050, 720);
+            this.MinimumSize = new Size(1080, 740);
             this.WindowState = FormWindowState.Maximized;
             this.BackColor = ColorTranslator.FromHtml("#f8fafc");
             this.Font = new Font("Segoe UI", 10f, FontStyle.Regular);
@@ -293,7 +293,7 @@ namespace SIGEP_App
             {
                 MessageBox.Show(
                     "LICENCIA DE USO INSTITUCIONAL\n\n" +
-                    "Este software ha sido desarrollado para la gestión documentaria y archivo sacramental de la Parroquia San José de Bellavista, en cumplimiento de los estándares de modernización y notificación electrónica.\n\n" +
+                    "Este software ha sido desarrollado para la gestión documentaria y archivo sacramental de la Parroquia San José de Bellavista.\n\n" +
                     "Queda prohibida la alteración no autorizada de los registros e índices almacenados.",
                     "Licencia de SIGEP",
                     MessageBoxButtons.OK,
@@ -408,7 +408,8 @@ namespace SIGEP_App
             }
             else if (tipo == "texto")
             {
-                entry_widget.MaxLength = 80;
+                entry_widget.MaxLength = 70;
+                entry_widget.CharacterCasing = CharacterCasing.Upper;
                 entry_widget.KeyPress += (s, e) =>
                 {
                     if (!char.IsControl(e.KeyChar) && !char.IsLetter(e.KeyChar) && e.KeyChar != ' ' && e.KeyChar != '.' && e.KeyChar != '-')
@@ -445,7 +446,6 @@ namespace SIGEP_App
             }
             else if (tipo == "registro_libro")
             {
-                // Solo admite números enteros positivos (mayores a 0)
                 entry_widget.MaxLength = 6;
                 entry_widget.KeyPress += (s, e) =>
                 {
@@ -498,14 +498,14 @@ namespace SIGEP_App
                 }
                 else if (tipo == "texto")
                 {
-                    string clean_val = Regex.Replace(val, @"[^A-Za-záéíóúÁÉÍÓÚñÑ\s\.\-]", "");
+                    string clean_val = Regex.Replace(val.ToUpper(), @"[^A-ZÁÉÍÓÚÑ\s\.\-]", "");
                     if (clean_val != val)
                     {
                         entry_widget.Text = clean_val;
                         entry_widget.SelectionStart = clean_val.Length;
                         val = clean_val;
                     }
-                    string soloLetras = Regex.Replace(val, @"[^A-Za-záéíóúÁÉÍÓÚñÑ]", "");
+                    string soloLetras = Regex.Replace(val, @"[^A-ZÁÉÍÓÚÑ]", "");
                     if (soloLetras.Length >= 2)
                     {
                         this.ActualizarBorde(entry_widget, verde);
@@ -513,41 +513,6 @@ namespace SIGEP_App
                     else
                     {
                         this.ActualizarBorde(entry_widget, rojo);
-                    }
-                }
-                else if (tipo == "correo")
-                {
-                    string clean_val = val.Replace(" ", "");
-                    if (clean_val != val)
-                    {
-                        entry_widget.Text = clean_val;
-                        entry_widget.SelectionStart = clean_val.Length;
-                        val = clean_val;
-                    }
-                    if (val == "")
-                    {
-                        this.ActualizarBorde(entry_widget, gris);
-                    }
-                    else
-                    {
-                        string[] lista = val.Split(',');
-                        bool todosValidos = true;
-                        for (int i = 0; i < lista.Length; i++)
-                        {
-                            string cLimpio = lista[i].Trim();
-                            if (cLimpio == "" || !this.logica.validar_correo_regex(cLimpio))
-                            {
-                                todosValidos = false;
-                            }
-                        }
-                        if (todosValidos)
-                        {
-                            this.ActualizarBorde(entry_widget, verde);
-                        }
-                        else
-                        {
-                            this.ActualizarBorde(entry_widget, rojo);
-                        }
                     }
                 }
                 else if (tipo == "numero")
@@ -700,58 +665,12 @@ namespace SIGEP_App
             };
         }
 
-        private void VincularAutocompletadoReniec(TextBox txtDniActual, TextBox txtNomActual, TextBox txtOtroDni)
+        private void VincularAutocompletadoReniecSeparado(TextBox txtDniActual, TextBox txtNombre, TextBox txtApellido, TextBox txtOtroDni, Func<bool> estaCargandoDatos)
         {
             string ultimoDniConsultado = "";
             txtDniActual.TextChanged += (s, e) =>
             {
-                string val = txtDniActual.Text.Trim();
-                if (val.Length < 8)
-                {
-                    ultimoDniConsultado = "";
-                    return;
-                }
-                if (val.Length == 8 && val != ultimoDniConsultado)
-                {
-                    if (val == "00000000")
-                    {
-                        ultimoDniConsultado = val;
-                        this.ActualizarBorde(txtDniActual, ColorTranslator.FromHtml("#ef4444"));
-                        MessageBox.Show("El número de DNI no puede estar compuesto únicamente por ceros.", "DNI Inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    if (txtOtroDni != null && txtOtroDni.Visible && txtOtroDni.Text.Trim() == val)
-                    {
-                        ultimoDniConsultado = val;
-                        this.ActualizarBorde(txtDniActual, ColorTranslator.FromHtml("#ef4444"));
-                        txtNomActual.Text = "";
-                        MessageBox.Show("No puede ingresar dos números de DNI iguales en el mismo registro. Deben ser diferentes.", "DNI Duplicado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    ultimoDniConsultado = val;
-                    Cursor.Current = Cursors.WaitCursor;
-                    string res = ApiReniec.consultar_dni(val);
-                    Cursor.Current = Cursors.Default;
-                    if (res != "")
-                    {
-                        txtNomActual.Text = res;
-                    }
-                    else
-                    {
-                        MessageBox.Show("DNI no encontrado en RENIEC. Ingrese manualmente el nombre.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                }
-            };
-        }
-
-        private void VincularAutocompletadoReniecSeparado(TextBox txtDniActual, TextBox txtNombre, TextBox txtApellido, TextBox txtOtroDni, Func<bool> estaCargandoTabla)
-        {
-            string ultimoDniConsultado = "";
-            txtDniActual.TextChanged += (s, e) =>
-            {
-                if (estaCargandoTabla != null && estaCargandoTabla())
+                if (estaCargandoDatos != null && estaCargandoDatos())
                 {
                     ultimoDniConsultado = txtDniActual.Text.Trim();
                     return;
@@ -792,12 +711,12 @@ namespace SIGEP_App
 
                     if (ok)
                     {
-                        txtNombre.Text = nom;
-                        txtApellido.Text = ape;
+                        txtNombre.Text = nom.ToUpper();
+                        txtApellido.Text = ape.ToUpper();
                     }
                     else
                     {
-                        MessageBox.Show("DNI no encontrado en RENIEC. Ingrese manualmente el nombre y apellido.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("DNI no encontrado en RENIEC. Ingrese manualmente los nombres y apellidos.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
             };
@@ -809,7 +728,7 @@ namespace SIGEP_App
             {
                 return false;
             }
-            string soloLetras = Regex.Replace(nombre, @"[^A-Za-záéíóúÁÉÍÓÚñÑ]", "");
+            string soloLetras = Regex.Replace(nombre.ToUpper(), @"[^A-ZÁÉÍÓÚÑ]", "");
             if (soloLetras.Length < 2)
             {
                 return false;
@@ -829,6 +748,70 @@ namespace SIGEP_App
                 return true;
             }
             return false;
+        }
+
+        private string[] ObtenerRequisitosSacramento(string sacramento, bool tienePadrinos, string estadoCivilPadrinos)
+        {
+            List<string> reqs = new List<string>();
+            if (sacramento == "Bautizo")
+            {
+                reqs.Add("1. Copia DNI Bautizado");
+                reqs.Add("2. Partida Nacimiento");
+                reqs.Add("3. Copia DNI Padre");
+                reqs.Add("4. Copia DNI Madre");
+                if (tienePadrinos)
+                {
+                    reqs.Add("5. Copia DNI Padrino / Madrina");
+                    if (estadoCivilPadrinos == "Casado(a)")
+                    {
+                        reqs.Add("6. Partida Matrimonio Religioso Padrinos");
+                    }
+                    else
+                    {
+                        reqs.Add("6. Constancia Confirmación Padrino/Madrina");
+                    }
+                }
+            }
+            else if (sacramento == "Primera Comunión")
+            {
+                reqs.Add("1. Copia DNI Comulgante");
+                reqs.Add("2. Partida Bautismo");
+                if (tienePadrinos)
+                {
+                    reqs.Add("3. Copia DNI Padrino / Madrina");
+                }
+            }
+            else if (sacramento == "Confirmación")
+            {
+                reqs.Add("1. Copia DNI Confirmando");
+                reqs.Add("2. Partida Bautismo");
+                reqs.Add("3. Constancia 1ra Comunión");
+                if (tienePadrinos)
+                {
+                    reqs.Add("4. Copia DNI Padrino / Madrina");
+                    if (estadoCivilPadrinos == "Casado(a)")
+                    {
+                        reqs.Add("5. Partida Matrimonio Religioso Padrinos");
+                    }
+                    else
+                    {
+                        reqs.Add("5. Constancia Confirmación Padrino/Madrina");
+                    }
+                }
+            }
+            else if (sacramento == "Matrimonio")
+            {
+                reqs.Add("1. Copia DNI Novio");
+                reqs.Add("2. Copia DNI Novia");
+                reqs.Add("3. Partida Bautismo Novio");
+                reqs.Add("4. Partida Bautismo Novia");
+                reqs.Add("5. Confirmación Novio");
+                reqs.Add("6. Confirmación Novia");
+                reqs.Add("7. Copia DNI Testigo 1");
+                reqs.Add("8. Copia DNI Testigo 2");
+                reqs.Add("9. Copia DNI Padrinos");
+            }
+            return reqs.ToArray();
         }
 
         // ================= 1. LOGIN DIRECTO =================
@@ -1113,7 +1096,7 @@ namespace SIGEP_App
             card1.Controls.Add(lblCardTit);
 
             Label lblTotal = new Label();
-            lblTotal.Text = this.db.nombres.Count.ToString();
+            lblTotal.Text = this.db.dnis_prin.Count.ToString();
             lblTotal.Font = new Font("Segoe UI", 26f, FontStyle.Bold);
             lblTotal.ForeColor = ColorTranslator.FromHtml("#0f172a");
             lblTotal.Location = new Point(20, 50);
@@ -1255,7 +1238,7 @@ namespace SIGEP_App
                     }
                     catch
                     {
-                        MessageBox.Show("La fecha de Primera Comunión no existe en el calendario (ej. 31 de Febrero).", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("La fecha de Primera Comunión no existe en el calendario.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                 }
@@ -1278,7 +1261,7 @@ namespace SIGEP_App
                     }
                     catch
                     {
-                        MessageBox.Show("La fecha de Confirmación no existe en el calendario (ej. 31 de Febrero).", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("La fecha de Confirmación no existe en el calendario.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                 }
@@ -1299,7 +1282,7 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(f_conf);
         }
 
-        // ================= 5. REGISTRO COMPLETO =================
+        // ================= 5. REGISTRO DOCUMENTARIO =================
         private void mostrar_registro()
         {
             this.limpiar_contenido();
@@ -1314,218 +1297,107 @@ namespace SIGEP_App
 
             Panel f_main = new Panel();
             f_main.Location = new Point(40, 60);
-            f_main.Size = new Size(920, 720);
+            f_main.Size = new Size(940, 710);
             f_main.BackColor = Color.White;
             f_main.BorderStyle = BorderStyle.FixedSingle;
 
-            Label lblTram = new Label();
-            lblTram.Text = "Trámite:";
-            lblTram.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblTram.Location = new Point(30, 20);
-            lblTram.AutoSize = true;
-            f_main.Controls.Add(lblTram);
+            Label lblTram = new Label() { Text = "Trámite:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 20), AutoSize = true };
+            ComboBox cb_tipo = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(150, 17), Width = 200 };
+            cb_tipo.Items.AddRange(new string[] { "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
 
-            ComboBox cb_tipo = new ComboBox();
-            cb_tipo.DropDownStyle = ComboBoxStyle.DropDownList;
-            cb_tipo.Items.AddRange(new string[] { "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio Regular" });
-            cb_tipo.Location = new Point(160, 17);
-            cb_tipo.Width = 200;
-            f_main.Controls.Add(cb_tipo);
-
-            Label lblGen = new Label();
-            lblGen.Text = "Género Titular:";
-            lblGen.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblGen.Location = new Point(400, 20);
-            lblGen.AutoSize = true;
-            f_main.Controls.Add(lblGen);
-
-            ComboBox cb_gen = new ComboBox();
-            cb_gen.DropDownStyle = ComboBoxStyle.DropDownList;
+            Label lblGen = new Label() { Text = "Género Titular:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(390, 20), AutoSize = true };
+            ComboBox cb_gen = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(510, 17), Width = 150 };
             cb_gen.Items.AddRange(new string[] { "Femenino", "Masculino" });
             cb_gen.SelectedIndex = 0;
-            cb_gen.Location = new Point(520, 17);
-            cb_gen.Width = 150;
-            f_main.Controls.Add(cb_gen);
 
-            Label lbl_d1 = new Label();
-            lbl_d1.Text = "DNI Bautizado:";
-            lbl_d1.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lbl_d1.Location = new Point(30, 60);
-            lbl_d1.Size = new Size(125, 25);
-            f_main.Controls.Add(lbl_d1);
+            f_main.Controls.AddRange(new Control[] { lblTram, cb_tipo, lblGen, cb_gen });
 
-            TextBox txt_d1 = new TextBox();
-            txt_d1.Location = new Point(160, 58);
-            txt_d1.Width = 120;
-            f_main.Controls.Add(txt_d1);
-
-            TextBox txt_nom1 = new TextBox();
-            txt_nom1.Location = new Point(290, 58);
-            txt_nom1.Width = 280;
-            AsignarPlaceholder(txt_nom1, "Nombre Titular");
-            f_main.Controls.Add(txt_nom1);
-
+            Label lbl_d1 = new Label() { Text = "DNI Bautizado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 62), Size = new Size(118, 25) };
+            TextBox txt_d1 = new TextBox() { Location = new Point(150, 59), Width = 110 };
             this.adjuntar_validacion(txt_d1, "dni");
+
+            Label lbl_nom1 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(275, 62), AutoSize = true };
+            TextBox txt_nom1 = new TextBox() { Location = new Point(355, 59), Width = 220 };
+            AsignarPlaceholder(txt_nom1, "NOMBRES");
             this.adjuntar_validacion(txt_nom1, "texto");
 
-            Label lbl_d2 = new Label();
-            lbl_d2.Text = "DNI Apoderado:";
-            lbl_d2.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lbl_d2.Location = new Point(30, 95);
-            lbl_d2.Size = new Size(125, 25);
-            f_main.Controls.Add(lbl_d2);
+            Label lbl_ape1 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(590, 62), AutoSize = true };
+            TextBox txt_ape1 = new TextBox() { Location = new Point(670, 59), Width = 235 };
+            AsignarPlaceholder(txt_ape1, "APELLIDOS");
+            this.adjuntar_validacion(txt_ape1, "texto");
 
-            TextBox txt_d2 = new TextBox();
-            txt_d2.Location = new Point(160, 93);
-            txt_d2.Width = 120;
-            f_main.Controls.Add(txt_d2);
+            f_main.Controls.AddRange(new Control[] { lbl_d1, txt_d1, lbl_nom1, txt_nom1, lbl_ape1, txt_ape1 });
 
-            TextBox txt_nom2 = new TextBox();
-            txt_nom2.Location = new Point(290, 93);
-            txt_nom2.Width = 280;
-            AsignarPlaceholder(txt_nom2, "Nombre Apoderado");
-            f_main.Controls.Add(txt_nom2);
-
+            Label lbl_d2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 102), Size = new Size(118, 25), Visible = false };
+            TextBox txt_d2 = new TextBox() { Location = new Point(150, 99), Width = 110, Visible = false };
             this.adjuntar_validacion(txt_d2, "dni");
+
+            Label lbl_nom2 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(275, 102), AutoSize = true, Visible = false };
+            TextBox txt_nom2 = new TextBox() { Location = new Point(355, 99), Width = 220, Visible = false };
+            AsignarPlaceholder(txt_nom2, "NOMBRES NOVIA");
             this.adjuntar_validacion(txt_nom2, "texto");
 
-            this.VincularAutocompletadoReniec(txt_d1, txt_nom1, txt_d2);
-            this.VincularAutocompletadoReniec(txt_d2, txt_nom2, txt_d1);
+            Label lbl_ape2 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(590, 102), AutoSize = true, Visible = false };
+            TextBox txt_ape2 = new TextBox() { Location = new Point(670, 99), Width = 235, Visible = false };
+            AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
+            this.adjuntar_validacion(txt_ape2, "texto");
 
-            Label lblNotif = new Label();
-            lblNotif.Text = "Notificar a:";
-            lblNotif.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblNotif.Location = new Point(30, 130);
-            lblNotif.Size = new Size(125, 25);
-            f_main.Controls.Add(lblNotif);
+            f_main.Controls.AddRange(new Control[] { lbl_d2, txt_d2, lbl_nom2, txt_nom2, lbl_ape2, txt_ape2 });
 
-            ComboBox cb_opc_cor = new ComboBox();
-            cb_opc_cor.DropDownStyle = ComboBoxStyle.DropDownList;
-            cb_opc_cor.Items.AddRange(new string[] { "Solo Novio", "Solo Novia", "Ambos" });
-            cb_opc_cor.SelectedIndex = 2;
-            cb_opc_cor.Location = new Point(160, 128);
-            cb_opc_cor.Width = 150;
-            f_main.Controls.Add(cb_opc_cor);
+            this.VincularAutocompletadoReniecSeparado(txt_d1, txt_nom1, txt_ape1, txt_d2, null);
+            this.VincularAutocompletadoReniecSeparado(txt_d2, txt_nom2, txt_ape2, txt_d1, null);
 
-            Label lbl_cor1 = new Label();
-            lbl_cor1.Text = "Correo Notif.:";
-            lbl_cor1.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lbl_cor1.Location = new Point(30, 165);
-            lbl_cor1.Size = new Size(125, 25);
-            f_main.Controls.Add(lbl_cor1);
+            CheckBox chk_padrinos = new CheckBox() { Text = "¿Cuenta con Padrinos?", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 142), AutoSize = true, Checked = true };
+            Label lbl_est_pad = new Label() { Text = "Estado Civil Padrino(s):", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(260, 144), AutoSize = true };
+            ComboBox cb_est_pad = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(435, 141), Width = 160 };
+            cb_est_pad.Items.AddRange(new string[] { "Soltero(a)", "Casado(a)" });
+            cb_est_pad.SelectedIndex = 0;
 
-            TextBox txt_cor1 = new TextBox();
-            txt_cor1.Location = new Point(160, 163);
-            txt_cor1.Width = 250;
-            f_main.Controls.Add(txt_cor1);
-
-            Label lbl_cor2 = new Label();
-            lbl_cor2.Text = "Correo Novia:";
-            lbl_cor2.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lbl_cor2.Location = new Point(430, 165);
-            lbl_cor2.Size = new Size(105, 25);
-            f_main.Controls.Add(lbl_cor2);
-
-            TextBox txt_cor2 = new TextBox();
-            txt_cor2.Location = new Point(540, 163);
-            txt_cor2.Width = 250;
-            f_main.Controls.Add(txt_cor2);
-
-            this.adjuntar_validacion(txt_cor1, "correo");
-            this.adjuntar_validacion(txt_cor2, "correo");
+            f_main.Controls.AddRange(new Control[] { chk_padrinos, lbl_est_pad, cb_est_pad });
 
             Panel f_req = new Panel();
-            f_req.Location = new Point(30, 205);
-            f_req.Size = new Size(850, 165);
+            f_req.Location = new Point(30, 180);
+            f_req.Size = new Size(875, 185);
             f_req.BackColor = ColorTranslator.FromHtml("#f8fafc");
             f_req.BorderStyle = BorderStyle.FixedSingle;
 
-            Label lblReqTit = new Label();
-            lblReqTit.Text = "Requisitos de Documentación:";
-            lblReqTit.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblReqTit.Location = new Point(15, 10);
-            lblReqTit.AutoSize = true;
+            Label lblReqTit = new Label() { Text = "Requisitos de Documentación:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
             f_req.Controls.Add(lblReqTit);
 
             this.chks.Clear();
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
             {
                 CheckBox chk = new CheckBox();
                 chk.AutoSize = true;
                 int col = i % 2;
                 int fila = i / 2;
-                chk.Location = new Point(20 + (col * 400), 40 + (fila * 28));
+                chk.Location = new Point(20 + (col * 420), 38 + (fila * 27));
                 this.chks.Add(chk);
                 f_req.Controls.Add(chk);
             }
             f_main.Controls.Add(f_req);
 
-            Label lblPago = new Label();
-            lblPago.Text = "Estado de Pago:";
-            lblPago.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblPago.Location = new Point(30, 385);
-            lblPago.Size = new Size(125, 25);
-            f_main.Controls.Add(lblPago);
-
-            ComboBox cb_pago = new ComboBox();
-            cb_pago.DropDownStyle = ComboBoxStyle.DropDownList;
+            Label lblPago = new Label() { Text = "Estado de Pago:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 380), Size = new Size(125, 25) };
+            ComboBox cb_pago = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(160, 378), Width = 150 };
             cb_pago.Items.AddRange(new string[] { "Pagado", "Falta Pagar" });
             cb_pago.SelectedIndex = 0;
-            cb_pago.Location = new Point(160, 383);
-            cb_pago.Width = 150;
-            f_main.Controls.Add(cb_pago);
 
-            TextBox txt_deuda = new TextBox();
-            txt_deuda.Location = new Point(330, 383);
-            txt_deuda.Width = 150;
-            txt_deuda.Visible = false;
+            TextBox txt_deuda = new TextBox() { Location = new Point(330, 378), Width = 150, Visible = false };
             AsignarPlaceholder(txt_deuda, "Monto deuda S/");
             this.adjuntar_validacion(txt_deuda, "numero");
-            f_main.Controls.Add(txt_deuda);
 
-            Panel f_obs_izq = new Panel();
-            f_obs_izq.Location = new Point(30, 425);
-            f_obs_izq.Size = new Size(415, 180);
-            f_obs_izq.BackColor = ColorTranslator.FromHtml("#f1f5f9");
-            f_obs_izq.BorderStyle = BorderStyle.FixedSingle;
+            f_main.Controls.AddRange(new Control[] { lblPago, cb_pago, txt_deuda });
 
-            Label lblObsGen = new Label();
-            lblObsGen.Text = "Observación Generada:";
-            lblObsGen.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblObsGen.Location = new Point(15, 10);
-            lblObsGen.AutoSize = true;
-            f_obs_izq.Controls.Add(lblObsGen);
-
-            TextBox txt_obs_auto = new TextBox();
-            txt_obs_auto.Multiline = true;
-            txt_obs_auto.ReadOnly = true;
-            txt_obs_auto.ScrollBars = ScrollBars.Vertical;
-            txt_obs_auto.Location = new Point(15, 38);
-            txt_obs_auto.Size = new Size(385, 125);
-            txt_obs_auto.BackColor = Color.White;
-            f_obs_izq.Controls.Add(txt_obs_auto);
+            Panel f_obs_izq = new Panel() { Location = new Point(30, 420), Size = new Size(425, 175), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            Label lblObsGen = new Label() { Text = "Observación Generada:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
+            TextBox txt_obs_auto = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 36), Size = new Size(395, 122), BackColor = Color.White };
+            f_obs_izq.Controls.AddRange(new Control[] { lblObsGen, txt_obs_auto });
             f_main.Controls.Add(f_obs_izq);
 
-            Panel f_obs_der = new Panel();
-            f_obs_der.Location = new Point(465, 425);
-            f_obs_der.Size = new Size(415, 180);
-            f_obs_der.BackColor = ColorTranslator.FromHtml("#f1f5f9");
-            f_obs_der.BorderStyle = BorderStyle.FixedSingle;
-
-            CheckBox chk_adic = new CheckBox();
-            chk_adic.Text = "¿Añadir observación adicional manual?";
-            chk_adic.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            chk_adic.Location = new Point(15, 10);
-            chk_adic.AutoSize = true;
-            f_obs_der.Controls.Add(chk_adic);
-
-            TextBox txt_obs_adic = new TextBox();
-            txt_obs_adic.Multiline = true;
-            txt_obs_adic.ScrollBars = ScrollBars.Vertical;
-            txt_obs_adic.Location = new Point(15, 38);
-            txt_obs_adic.Size = new Size(385, 125);
-            txt_obs_adic.Visible = false;
-            f_obs_der.Controls.Add(txt_obs_adic);
+            Panel f_obs_der = new Panel() { Location = new Point(480, 420), Size = new Size(425, 175), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            CheckBox chk_adic = new CheckBox() { Text = "¿Añadir observación adicional manual?", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
+            TextBox txt_obs_adic = new TextBox() { Multiline = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 36), Size = new Size(395, 122), Visible = false };
+            f_obs_der.Controls.AddRange(new Control[] { chk_adic, txt_obs_adic });
             f_main.Controls.Add(f_obs_der);
 
             Action actualizar_obs_auto = () =>
@@ -1558,10 +1430,104 @@ namespace SIGEP_App
                 txt_obs_auto.Text = texto.Trim();
             };
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
             {
                 this.chks[i].CheckedChanged += (s, e) => actualizar_obs_auto();
             }
+
+            Action recargar_requisitos_dinamicos = () =>
+            {
+                if (cb_tipo.SelectedItem == null)
+                {
+                    return;
+                }
+                string eleccion = cb_tipo.SelectedItem.ToString();
+                bool tienePad = chk_padrinos.Checked;
+                string estPad = cb_est_pad.SelectedItem != null ? cb_est_pad.SelectedItem.ToString() : "Soltero(a)";
+
+                if (eleccion == "Bautizo")
+                {
+                    lblGen.Visible = true;
+                    cb_gen.Visible = true;
+                    lbl_d1.Text = "DNI Bautizado:";
+                    lbl_d2.Visible = false;
+                    txt_d2.Visible = false;
+                    lbl_nom2.Visible = false;
+                    txt_nom2.Visible = false;
+                    lbl_ape2.Visible = false;
+                    txt_ape2.Visible = false;
+                    chk_padrinos.Visible = true;
+                    lbl_est_pad.Visible = tienePad;
+                    cb_est_pad.Visible = tienePad;
+                }
+                else if (eleccion == "Primera Comunión")
+                {
+                    lblGen.Visible = true;
+                    cb_gen.Visible = true;
+                    lbl_d1.Text = "DNI Comulgante:";
+                    lbl_d2.Visible = false;
+                    txt_d2.Visible = false;
+                    lbl_nom2.Visible = false;
+                    txt_nom2.Visible = false;
+                    lbl_ape2.Visible = false;
+                    txt_ape2.Visible = false;
+                    chk_padrinos.Visible = true;
+                    lbl_est_pad.Visible = false;
+                    cb_est_pad.Visible = false;
+                }
+                else if (eleccion == "Confirmación")
+                {
+                    lblGen.Visible = true;
+                    cb_gen.Visible = true;
+                    lbl_d1.Text = "DNI Confirmando:";
+                    lbl_d2.Visible = false;
+                    txt_d2.Visible = false;
+                    lbl_nom2.Visible = false;
+                    txt_nom2.Visible = false;
+                    lbl_ape2.Visible = false;
+                    txt_ape2.Visible = false;
+                    chk_padrinos.Visible = true;
+                    lbl_est_pad.Visible = tienePad;
+                    cb_est_pad.Visible = tienePad;
+                }
+                else if (eleccion == "Matrimonio")
+                {
+                    lblGen.Visible = false;
+                    cb_gen.Visible = false;
+                    lbl_d1.Text = "DNI Novio:";
+                    lbl_d2.Visible = true;
+                    txt_d2.Visible = true;
+                    lbl_nom2.Visible = true;
+                    txt_nom2.Visible = true;
+                    lbl_ape2.Visible = true;
+                    txt_ape2.Visible = true;
+                    chk_padrinos.Visible = false;
+                    lbl_est_pad.Visible = false;
+                    cb_est_pad.Visible = false;
+                }
+
+                string[] reqs = this.ObtenerRequisitosSacramento(eleccion, tienePad, estPad);
+                this.reqs_activos = reqs.Length;
+                for (int j = 0; j < this.chks.Count; j++)
+                {
+                    if (j < reqs.Length)
+                    {
+                        this.chks[j].Text = reqs[j];
+                        this.chks[j].Visible = true;
+                    }
+                    else
+                    {
+                        this.chks[j].Visible = false;
+                        this.chks[j].Checked = false;
+                    }
+                }
+                f_main.Invalidate();
+                actualizar_obs_auto();
+            };
+
+            cb_tipo.SelectedIndexChanged += (s, e) => recargar_requisitos_dinamicos();
+            chk_padrinos.CheckedChanged += (s, e) => recargar_requisitos_dinamicos();
+            cb_est_pad.SelectedIndexChanged += (s, e) => recargar_requisitos_dinamicos();
 
             cb_pago.SelectedIndexChanged += (s, e) =>
             {
@@ -1591,136 +1557,22 @@ namespace SIGEP_App
                 }
             };
 
-            Action<string> cambiar_modo_correo = (opc) =>
-            {
-                lbl_cor2.Visible = false;
-                txt_cor2.Visible = false;
-
-                if (cb_tipo.SelectedItem != null && cb_tipo.SelectedItem.ToString() == "Matrimonio Regular")
-                {
-                    if (opc == "Solo Novio")
-                    {
-                        lbl_cor1.Text = "Correo Novio:";
-                    }
-                    else if (opc == "Solo Novia")
-                    {
-                        lbl_cor1.Text = "Correo Novia:";
-                    }
-                    else if (opc == "Ambos")
-                    {
-                        lbl_cor1.Text = "Correo Novio:";
-                        lbl_cor2.Visible = true;
-                        txt_cor2.Visible = true;
-                    }
-                }
-                else
-                {
-                    lbl_cor1.Text = "Correo Notif.:";
-                }
-            };
-
-            cb_opc_cor.SelectedIndexChanged += (s, e) =>
-            {
-                if (cb_opc_cor.SelectedItem != null)
-                {
-                    cambiar_modo_correo(cb_opc_cor.SelectedItem.ToString());
-                }
-            };
-
-            Action<string> actualizar_interfaz_registro = (eleccion) =>
-            {
-                string[] reqs = new string[0];
-                if (eleccion == "Bautizo")
-                {
-                    reqs = new string[] { "1. Copia DNI Bautizado", "2. Partida Nacimiento", "3. Copia DNI Padre", "4. Copia DNI Madre", "5. Copia DNI Padrino", "6. Copia DNI Madrina" };
-                    lblGen.Visible = true;
-                    cb_gen.Visible = true;
-                    lbl_d1.Text = "DNI Bautizado:";
-                    AsignarPlaceholder(txt_nom1, "Nombre Bautizado");
-                    lbl_d2.Text = "DNI Apoderado:";
-                    AsignarPlaceholder(txt_nom2, "Nombre Apoderado");
-                    lblNotif.Visible = false;
-                    cb_opc_cor.Visible = false;
-                    cambiar_modo_correo("N/A");
-                }
-                else if (eleccion == "Primera Comunión")
-                {
-                    reqs = new string[] { "1. Copia DNI Comulgante", "2. Partida Bautismo", "3. Copia DNI Padre", "4. Copia DNI Madre" };
-                    lblGen.Visible = true;
-                    cb_gen.Visible = true;
-                    lbl_d1.Text = "DNI Comulgante:";
-                    AsignarPlaceholder(txt_nom1, "Nombre Comulgante");
-                    lbl_d2.Text = "DNI Apoderado:";
-                    AsignarPlaceholder(txt_nom2, "Nombre Apoderado");
-                    lblNotif.Visible = false;
-                    cb_opc_cor.Visible = false;
-                    cambiar_modo_correo("N/A");
-                }
-                else if (eleccion == "Confirmación")
-                {
-                    reqs = new string[] { "1. Copia DNI Confirmando", "2. Partida Bautismo", "3. Const. 1ra Comunión", "4. Copia DNI Padrino/Madrina", "5. Const. Sacram Padrino" };
-                    lblGen.Visible = true;
-                    cb_gen.Visible = true;
-                    lbl_d1.Text = "DNI Confirmando:";
-                    AsignarPlaceholder(txt_nom1, "Nombre Confirmando");
-                    lbl_d2.Text = "DNI Apoderado:";
-                    AsignarPlaceholder(txt_nom2, "Nombre Apoderado");
-                    lblNotif.Visible = false;
-                    cb_opc_cor.Visible = false;
-                    cambiar_modo_correo("N/A");
-                }
-                else if (eleccion == "Matrimonio Regular")
-                {
-                    reqs = new string[] { "1. Copia DNI Novio", "2. Copia DNI Novia", "3. Partida Bautismo Novio", "4. Partida Bautismo Novia", "5. Confirmación Novio", "6. Confirmación Novia", "7. Copia DNI Testigo 1", "8. Copia DNI Testigo 2" };
-                    lblGen.Visible = false;
-                    cb_gen.Visible = false;
-                    lbl_d1.Text = "DNI Novio:";
-                    AsignarPlaceholder(txt_nom1, "Nombre Novio");
-                    lbl_d2.Text = "DNI Novia:";
-                    AsignarPlaceholder(txt_nom2, "Nombre Novia");
-                    lblNotif.Visible = true;
-                    cb_opc_cor.Visible = true;
-                    cb_opc_cor.SelectedItem = "Ambos";
-                    cambiar_modo_correo("Ambos");
-                }
-
-                this.reqs_activos = reqs.Length;
-                for (int j = 0; j < this.chks.Count; j++)
-                {
-                    if (j < reqs.Length)
-                    {
-                        this.chks[j].Text = reqs[j];
-                        this.chks[j].Visible = true;
-                    }
-                    else
-                    {
-                        this.chks[j].Visible = false;
-                        this.chks[j].Checked = false;
-                    }
-                }
-                actualizar_obs_auto();
-            };
-
-            cb_tipo.SelectedIndexChanged += (s, e) =>
-            {
-                if (cb_tipo.SelectedItem != null)
-                {
-                    actualizar_interfaz_registro(cb_tipo.SelectedItem.ToString());
-                }
-            };
             cb_tipo.SelectedItem = "Bautizo";
 
-            Button btnGuardarExp = CrearBotonAccion("Inscribir y Guardar Expediente", ColorTranslator.FromHtml("#2563eb"), new Point(285, 630), new Size(350, 50), 13f);
+            Button btnGuardarExp = CrearBotonAccion("Inscribir y Guardar Expediente", ColorTranslator.FromHtml("#2563eb"), new Point(295, 620), new Size(350, 50), 13f);
 
             btnGuardarExp.Click += (s, e) =>
             {
-                string dni1_val = txt_d1.Text.Trim();
-                string dni2_val = txt_d2.Text.Trim();
-                string nom1_val = Regex.Replace(txt_nom1.Text.Trim(), @"\s+", " ");
-                string nom2_val = Regex.Replace(txt_nom2.Text.Trim(), @"\s+", " ");
                 string tipo_sel = cb_tipo.SelectedItem.ToString();
+                string dni1_val = txt_d1.Text.Trim();
+                string nom1_val = Regex.Replace(txt_nom1.Text.Trim().ToUpper(), @"\s+", " ");
+                string ape1_val = Regex.Replace(txt_ape1.Text.Trim().ToUpper(), @"\s+", " ");
 
-                if (dni1_val == "" && dni2_val == "" && nom1_val == "" && nom2_val == "")
+                string dni2_val = "---";
+                string nom2_val = "---";
+                string ape2_val = "---";
+
+                if (dni1_val == "" && nom1_val == "" && ape1_val == "")
                 {
                     MessageBox.Show("No se han llenado los datos del feligrés.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
@@ -1733,130 +1585,65 @@ namespace SIGEP_App
                 }
                 if (!this.EsNombreValido(nom1_val))
                 {
-                    errores.Add("- El Nombre del titular debe contener al menos 2 letras válidas.");
+                    errores.Add("- Los Nombres del titular deben contener al menos 2 letras válidas.");
+                }
+                if (!this.EsNombreValido(ape1_val))
+                {
+                    errores.Add("- Los Apellidos del titular deben contener al menos 2 letras válidas.");
                 }
 
-                if (dni2_val.Length != 8 || dni2_val == "00000000")
+                if (tipo_sel == "Matrimonio")
                 {
-                    if (tipo_sel == "Matrimonio Regular")
+                    dni2_val = txt_d2.Text.Trim();
+                    nom2_val = Regex.Replace(txt_nom2.Text.Trim().ToUpper(), @"\s+", " ");
+                    ape2_val = Regex.Replace(txt_ape2.Text.Trim().ToUpper(), @"\s+", " ");
+
+                    if (dni2_val.Length != 8 || dni2_val == "00000000")
                     {
                         errores.Add("- El DNI de la Novia debe tener 8 dígitos numéricos válidos.");
                     }
-                    else
+                    if (!this.EsNombreValido(nom2_val))
                     {
-                        errores.Add("- El DNI del Apoderado es obligatorio (8 dígitos numéricos válidos).");
+                        errores.Add("- Los Nombres de la Novia deben contener al menos 2 letras válidas.");
                     }
-                }
-                if (!this.EsNombreValido(nom2_val))
-                {
-                    if (tipo_sel == "Matrimonio Regular")
+                    if (!this.EsNombreValido(ape2_val))
                     {
-                        errores.Add("- El Nombre de la Novia debe contener al menos 2 letras válidas.");
+                        errores.Add("- Los Apellidos de la Novia deben contener al menos 2 letras válidas.");
                     }
-                    else
+                    if (dni1_val != "" && dni1_val == dni2_val)
                     {
-                        errores.Add("- El Nombre del Apoderado debe contener al menos 2 letras válidas.");
+                        errores.Add("- No se pueden colocar 2 DNIs iguales. Los DNIs de los novios deben ser diferentes.");
                     }
-                }
-
-                if (dni1_val != "" && dni1_val == dni2_val)
-                {
-                    errores.Add("- No se pueden colocar 2 DNIs iguales. El DNI del titular y el secundario deben ser diferentes.");
-                }
-                if (nom1_val != "" && nom1_val.ToLower() == nom2_val.ToLower())
-                {
-                    errores.Add("- El nombre del titular y el nombre secundario no pueden ser iguales.");
+                    if (nom1_val != "" && ape1_val != "" && (nom1_val + " " + ape1_val) == (nom2_val + " " + ape2_val))
+                    {
+                        errores.Add("- Los nombres y apellidos de los novios no pueden ser iguales.");
+                    }
                 }
 
                 for (int idxExist = 0; idxExist < this.db.dnis_prin.Count; idxExist++)
                 {
-                    if (this.db.dnis_prin[idxExist] == dni1_val && this.db.tipos[idxExist] == tipo_sel)
+                    if (this.db.tipos[idxExist] == tipo_sel)
                     {
-                        errores.Add("- El DNI " + dni1_val + " ya se encuentra registrado en " + tipo_sel + ".");
-                        break;
-                    }
-                    if (tipo_sel == "Matrimonio Regular" && (this.db.dnis_sec[idxExist] == dni2_val || this.db.dnis_prin[idxExist] == dni2_val) && this.db.tipos[idxExist] == tipo_sel)
-                    {
-                        errores.Add("- El DNI " + dni2_val + " ya se encuentra registrado en " + tipo_sel + ".");
-                        break;
+                        if (this.db.dnis_prin[idxExist] == dni1_val || (tipo_sel == "Matrimonio" && this.db.dnis_sec[idxExist] == dni1_val))
+                        {
+                            errores.Add("- El DNI " + dni1_val + " ya se encuentra registrado en " + tipo_sel + ".");
+                            break;
+                        }
+                        if (tipo_sel == "Matrimonio" && (this.db.dnis_prin[idxExist] == dni2_val || this.db.dnis_sec[idxExist] == dni2_val))
+                        {
+                            errores.Add("- El DNI " + dni2_val + " ya se encuentra registrado en " + tipo_sel + ".");
+                            break;
+                        }
                     }
                 }
 
-                if (tipo_sel == "Primera Comunión")
+                if (tipo_sel == "Primera Comunión" && this.config.fecha_comunion == "--/--")
                 {
-                    if (this.config.fecha_comunion == "--/--")
-                    {
-                        errores.Add("- Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de registrar.");
-                    }
+                    errores.Add("- Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de registrar.");
                 }
-
-                if (tipo_sel == "Confirmación")
+                if (tipo_sel == "Confirmación" && this.config.fecha_confirmacion == "--/--")
                 {
-                    if (this.config.fecha_confirmacion == "--/--")
-                    {
-                        errores.Add("- Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de registrar.");
-                    }
-                }
-
-                string nom_final = nom1_val;
-                string gen_final = "";
-                string cor_final = "";
-
-                if (tipo_sel == "Matrimonio Regular")
-                {
-                    gen_final = "N/A";
-                    List<string> correos_validos = new List<string>();
-                    string opc = cb_opc_cor.SelectedItem.ToString();
-
-                    if (opc == "Solo Novio" || opc == "Ambos")
-                    {
-                        string val_c1 = txt_cor1.Text.Trim();
-                        if (val_c1 != "")
-                        {
-                            if (!this.logica.validar_correo_regex(val_c1))
-                            {
-                                errores.Add("- Correo del Novio inválido.");
-                            }
-                            else
-                            {
-                                correos_validos.Add(val_c1);
-                            }
-                        }
-                    }
-
-                    if (opc == "Solo Novia" || opc == "Ambos")
-                    {
-                        string val_c2 = txt_cor2.Text.Trim();
-                        if (val_c2 != "")
-                        {
-                            if (!this.logica.validar_correo_regex(val_c2))
-                            {
-                                errores.Add("- Correo de la Novia inválido.");
-                            }
-                            else
-                            {
-                                correos_validos.Add(val_c2);
-                            }
-                        }
-                    }
-
-                    cor_final = string.Join(",", correos_validos);
-                }
-                else
-                {
-                    string val_c1 = txt_cor1.Text.Trim();
-                    if (val_c1 != "")
-                    {
-                        if (!this.logica.validar_correo_regex(val_c1))
-                        {
-                            errores.Add("- El correo ingresado es inválido.");
-                        }
-                        else
-                        {
-                            cor_final = val_c1;
-                        }
-                    }
-                    gen_final = cb_gen.SelectedItem.ToString();
+                    errores.Add("- Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de registrar.");
                 }
 
                 string pago = cb_pago.SelectedItem.ToString();
@@ -1864,24 +1651,10 @@ namespace SIGEP_App
                 if (pago == "Falta Pagar")
                 {
                     deuda = txt_deuda.Text.Trim();
-                    if (deuda == "")
+                    double monto_float = 0;
+                    if (deuda == "" || !double.TryParse(deuda, NumberStyles.Any, CultureInfo.InvariantCulture, out monto_float) || monto_float <= 0)
                     {
-                        errores.Add("- Debe especificar el monto de la deuda.");
-                    }
-                    else
-                    {
-                        double monto_float = 0;
-                        if (double.TryParse(deuda, NumberStyles.Any, CultureInfo.InvariantCulture, out monto_float))
-                        {
-                            if (monto_float <= 0)
-                            {
-                                errores.Add("- El monto de la deuda debe ser mayor a 0 si indica 'Falta Pagar'.");
-                            }
-                        }
-                        else
-                        {
-                            errores.Add("- El monto de la deuda no es un número válido.");
-                        }
+                        errores.Add("- Debe especificar un monto de deuda válido mayor a 0.");
                     }
                 }
 
@@ -1910,17 +1683,10 @@ namespace SIGEP_App
                     }
                 }
 
-                string est = "";
-                if (completos && pago == "Pagado")
-                {
-                    est = "Inscrito(a)";
-                }
-                else
-                {
-                    est = "Observado";
-                }
-
-                string obs_auto_txt = txt_obs_auto.Text.Trim();
+                string est = (completos && pago == "Pagado") ? "Inscrito(a)" : "Observado";
+                string gen_final = (tipo_sel == "Matrimonio") ? "N/A" : cb_gen.SelectedItem.ToString();
+                string t_pad_str = (tipo_sel == "Matrimonio") ? "SI" : (chk_padrinos.Checked ? "SI" : "NO");
+                string est_pad_str = ((tipo_sel == "Bautizo" || tipo_sel == "Confirmación") && chk_padrinos.Checked) ? cb_est_pad.SelectedItem.ToString() : "---";
 
                 DialogResult res_conf = MessageBox.Show("¿Está seguro de inscribir y guardar este expediente?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (res_conf != DialogResult.Yes)
@@ -1931,78 +1697,35 @@ namespace SIGEP_App
                 List<string> lista_chks = new List<string>();
                 for (int k = 0; k < this.reqs_activos; k++)
                 {
-                    if (this.chks[k].Checked)
-                    {
-                        lista_chks.Add("1");
-                    }
-                    else
-                    {
-                        lista_chks.Add("0");
-                    }
+                    lista_chks.Add(this.chks[k].Checked ? "1" : "0");
                 }
-                string chks_str = string.Join(",", lista_chks);
+                string chks_str = string.Join("-", lista_chks);
 
-                this.db.registrar(dni1_val, dni2_val, nom_final, nom2_val, cor_final, gen_final, tipo_sel, est, obs_auto_txt, obs_adic_txt, chks_str, "Por Programar", "---", "---", "---", pago, deuda);
+                this.db.registrar(
+                    "TRAMITE",
+                    dni1_val,
+                    nom1_val,
+                    ape1_val,
+                    dni2_val,
+                    nom2_val,
+                    ape2_val,
+                    gen_final,
+                    tipo_sel,
+                    est,
+                    t_pad_str,
+                    est_pad_str,
+                    chks_str,
+                    txt_obs_auto.Text.Trim(),
+                    obs_adic_txt,
+                    "Por Programar",
+                    "---",
+                    "---",
+                    "---",
+                    pago,
+                    deuda
+                );
 
-                if (pago == "Pagado")
-                {
-                    if (completos)
-                    {
-                        string dir_temp = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "exportaciones");
-                        if (!Directory.Exists(dir_temp))
-                        {
-                            Directory.CreateDirectory(dir_temp);
-                        }
-                        string ruta_pdf = Path.Combine(dir_temp, "Constancia_" + dni1_val + ".pdf");
-
-                        string dni_impreso = "";
-                        if (tipo_sel == "Matrimonio Regular")
-                        {
-                            dni_impreso = dni1_val + ", " + dni2_val;
-                        }
-                        else
-                        {
-                            dni_impreso = dni1_val;
-                        }
-
-                        this.logica.generar_constancia_inscripcion(ruta_pdf, nom_final, nom2_val, dni_impreso, gen_final, tipo_sel, this.config);
-
-                        if (cor_final != "")
-                        {
-                            this.logica.enviar_correo(cor_final, nom_final, nom2_val, tipo_sel, est, obs_auto_txt, obs_adic_txt, pago, deuda, ruta_pdf);
-                            MessageBox.Show("Inscrito Exitosamente. Constancia enviada a los correos.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Inscrito Exitosamente. Constancia guardada en 'exportaciones'.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                    else
-                    {
-                        if (cor_final != "")
-                        {
-                            this.logica.enviar_correo(cor_final, nom_final, nom2_val, tipo_sel, est, obs_auto_txt, obs_adic_txt, pago, deuda);
-                            MessageBox.Show("Registrado. Se envió notificación al correo (Sin PDF).", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Registrado correctamente (Pendiente de regularizar).", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                }
-                else
-                {
-                    if (cor_final != "")
-                    {
-                        this.logica.enviar_correo(cor_final, nom_final, nom2_val, tipo_sel, est, obs_auto_txt, obs_adic_txt, pago, deuda);
-                        MessageBox.Show("Registrado. Se envió notificación al correo (Sin PDF).", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        MessageBox.Show("Registrado correctamente (Pendiente de regularizar).", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                }
-
+                MessageBox.Show("Expediente registrado y guardado correctamente en el sistema.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 this.mostrar_dashboard();
             };
 
@@ -2010,13 +1733,13 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(f_main);
         }
 
-        // ================= 6. BÚSQUEDA Y EDICIÓN =================
+        // ================= 6. BUSCAR Y EDITAR (POR DNI O APELLIDOS) =================
         private void mostrar_buscar()
         {
             this.limpiar_contenido();
 
             Label lblTit = new Label();
-            lblTit.Text = "Buscador de Expedientes";
+            lblTit.Text = "Buscador y Editor de Expedientes";
             lblTit.Font = new Font("Segoe UI", 20f, FontStyle.Bold);
             lblTit.ForeColor = ColorTranslator.FromHtml("#2563eb");
             lblTit.Location = new Point(40, 15);
@@ -2024,137 +1747,193 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(lblTit);
 
             Panel f_top = new Panel();
-            f_top.Location = new Point(40, 60);
-            f_top.Size = new Size(920, 60);
+            f_top.Location = new Point(40, 55);
+            f_top.Size = new Size(940, 62);
             f_top.BackColor = Color.White;
             f_top.BorderStyle = BorderStyle.FixedSingle;
 
-            Label lblBusq = new Label();
-            lblBusq.Text = "DNI del Feligrés:";
-            lblBusq.Location = new Point(20, 20);
-            lblBusq.AutoSize = true;
-            f_top.Controls.Add(lblBusq);
+            Label lblCriterio = new Label() { Text = "Buscar por:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 20), AutoSize = true };
+            ComboBox cb_criterio = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(105, 17), Width = 130 };
+            cb_criterio.Items.AddRange(new string[] { "DNI", "Apellidos" });
+            cb_criterio.SelectedIndex = 0;
 
-            TextBox txt_bus = new TextBox();
-            txt_bus.Location = new Point(140, 17);
-            txt_bus.Width = 220;
-            this.adjuntar_validacion(txt_bus, "dni");
-            f_top.Controls.Add(txt_bus);
+            TextBox txt_bus_dni = new TextBox() { Location = new Point(250, 17), Width = 220 };
+            AsignarPlaceholder(txt_bus_dni, "Ingrese 8 dígitos del DNI");
+            this.adjuntar_validacion(txt_bus_dni, "dni");
 
-            Button btnConsultar = CrearBotonAccion("Consultar", ColorTranslator.FromHtml("#10b981"), new Point(380, 13), new Size(130, 34));
-            f_top.Controls.Add(btnConsultar);
+            TextBox txt_bus_ape = new TextBox() { Location = new Point(250, 17), Width = 260, Visible = false };
+            AsignarPlaceholder(txt_bus_ape, "INGRESE APELLIDOS A BUSCAR");
+            this.adjuntar_validacion(txt_bus_ape, "texto");
 
+            cb_criterio.SelectedIndexChanged += (s, e) =>
+            {
+                bool esDni = (cb_criterio.SelectedItem.ToString() == "DNI");
+                txt_bus_dni.Visible = esDni;
+                txt_bus_ape.Visible = !esDni;
+                txt_bus_dni.Text = "";
+                txt_bus_ape.Text = "";
+                f_top.Invalidate();
+            };
+
+            Button btnConsultar = CrearBotonAccion("Consultar", ColorTranslator.FromHtml("#10b981"), new Point(530, 13), new Size(130, 35));
+            Button btnMostrarTodos = CrearBotonAccion("Ver Todos", ColorTranslator.FromHtml("#64748b"), new Point(675, 13), new Size(130, 35));
+
+            f_top.Controls.AddRange(new Control[] { lblCriterio, cb_criterio, txt_bus_dni, txt_bus_ape, btnConsultar, btnMostrarTodos });
             this.content_frame.Controls.Add(f_top);
 
+            DataGridView tablaResultados = new DataGridView();
+            tablaResultados.Location = new Point(40, 125);
+            tablaResultados.Size = new Size(940, 135);
+            tablaResultados.BackgroundColor = Color.White;
+            tablaResultados.BorderStyle = BorderStyle.FixedSingle;
+            tablaResultados.AllowUserToAddRows = false;
+            tablaResultados.ReadOnly = true;
+            tablaResultados.RowHeadersVisible = false;
+            tablaResultados.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            tablaResultados.MultiSelect = false;
+            tablaResultados.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            tablaResultados.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            tablaResultados.DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+
+            tablaResultados.Columns.Add("colDni", "DNI");
+            tablaResultados.Columns.Add("colNom", "Nombres");
+            tablaResultados.Columns.Add("colApe", "Apellidos");
+            tablaResultados.Columns.Add("colSac", "Sacramento");
+            tablaResultados.Columns.Add("colEst", "Estado");
+            tablaResultados.Columns.Add("colPag", "Pago");
+
+            this.content_frame.Controls.Add(tablaResultados);
+
             Panel f_edit = new Panel();
-            f_edit.Location = new Point(40, 130);
-            f_edit.Size = new Size(920, 650);
+            f_edit.Location = new Point(40, 270);
+            f_edit.Size = new Size(940, 660);
             f_edit.BackColor = Color.White;
             f_edit.BorderStyle = BorderStyle.FixedSingle;
             f_edit.Visible = false;
 
             int idx_actual = -1;
+            bool cargandoEdicion = false;
+            bool llenandoTabla = false;
 
-            Label lbl_e_dni1 = new Label() { Text = "DNI Titular:", Location = new Point(20, 20), Size = new Size(125, 25) };
-            TextBox t_dni1 = new TextBox() { Location = new Point(150, 18), Width = 220 };
+            Label lbl_e_dni1 = new Label() { Text = "DNI Titular:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 18), Size = new Size(115, 25) };
+            TextBox t_dni1 = new TextBox() { Location = new Point(140, 15), Width = 110 };
             this.adjuntar_validacion(t_dni1, "dni");
 
-            Label lbl_e_dni2 = new Label() { Text = "DNI Apoderado:", Location = new Point(400, 20), Size = new Size(125, 25) };
-            TextBox t_dni2 = new TextBox() { Location = new Point(530, 18), Width = 220 };
+            Label lbl_e_nom1 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(265, 18), AutoSize = true };
+            TextBox t_nom1 = new TextBox() { Location = new Point(345, 15), Width = 225 };
+            this.adjuntar_validacion(t_nom1, "texto");
+
+            Label lbl_e_ape1 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 18), AutoSize = true };
+            TextBox t_ape1 = new TextBox() { Location = new Point(665, 15), Width = 245 };
+            this.adjuntar_validacion(t_ape1, "texto");
+
+            f_edit.Controls.AddRange(new Control[] { lbl_e_dni1, t_dni1, lbl_e_nom1, t_nom1, lbl_e_ape1, t_ape1 });
+
+            Label lbl_e_dni2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 56), Size = new Size(115, 25), Visible = false };
+            TextBox t_dni2 = new TextBox() { Location = new Point(140, 53), Width = 110, Visible = false };
             this.adjuntar_validacion(t_dni2, "dni");
 
-            Label lbl_e_nom1 = new Label() { Text = "Titular:", Location = new Point(20, 55), Size = new Size(125, 25) };
-            TextBox t_nom = new TextBox() { Location = new Point(150, 53), Width = 220 };
-            this.adjuntar_validacion(t_nom, "texto");
-
-            Label lbl_e_nom2 = new Label() { Text = "Apoderado:", Location = new Point(400, 55), Size = new Size(125, 25) };
-            TextBox t_nom2 = new TextBox() { Location = new Point(530, 53), Width = 220 };
+            Label lbl_e_nom2 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(265, 56), AutoSize = true, Visible = false };
+            TextBox t_nom2 = new TextBox() { Location = new Point(345, 53), Width = 225, Visible = false };
             this.adjuntar_validacion(t_nom2, "texto");
 
-            Label lbl_e_cor = new Label() { Text = "Correo(s):", Location = new Point(20, 90), Size = new Size(125, 25) };
-            TextBox t_cor = new TextBox() { Location = new Point(150, 88), Width = 400 };
-            this.adjuntar_validacion(t_cor, "correo");
+            Label lbl_e_ape2 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 56), AutoSize = true, Visible = false };
+            TextBox t_ape2 = new TextBox() { Location = new Point(665, 53), Width = 245, Visible = false };
+            this.adjuntar_validacion(t_ape2, "texto");
 
-            Label lbl_e_est = new Label() { Text = "Estado:", Location = new Point(20, 125), Size = new Size(125, 25) };
-            ComboBox c_est = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(150, 123), Width = 150 };
+            f_edit.Controls.AddRange(new Control[] { lbl_e_dni2, t_dni2, lbl_e_nom2, t_nom2, lbl_e_ape2, t_ape2 });
+
+            this.VincularAutocompletadoReniecSeparado(t_dni1, t_nom1, t_ape1, t_dni2, () => cargandoEdicion);
+            this.VincularAutocompletadoReniecSeparado(t_dni2, t_nom2, t_ape2, t_dni1, () => cargandoEdicion);
+
+            Label lbl_e_est = new Label() { Text = "Estado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 96), AutoSize = true };
+            ComboBox c_est = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(85, 93), Width = 135 };
             c_est.Items.AddRange(new string[] { "Inscrito(a)", "Observado", "Finalizado" });
 
-            Label lbl_e_pag = new Label() { Text = "Pago:", Location = new Point(320, 125), Size = new Size(50, 25) };
-            ComboBox c_pag = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(375, 123), Width = 130 };
+            Label lbl_e_pag = new Label() { Text = "Pago:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(235, 96), AutoSize = true };
+            ComboBox c_pag = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(285, 93), Width = 120 };
             c_pag.Items.AddRange(new string[] { "Pagado", "Falta Pagar" });
 
-            TextBox t_deu = new TextBox() { Location = new Point(520, 123), Width = 90 };
+            TextBox t_deu = new TextBox() { Location = new Point(415, 93), Width = 85 };
+            AsignarPlaceholder(t_deu, "Deuda S/");
             this.adjuntar_validacion(t_deu, "numero");
 
-            f_edit.Controls.AddRange(new Control[] { lbl_e_dni1, t_dni1, lbl_e_dni2, t_dni2, lbl_e_nom1, t_nom, lbl_e_nom2, t_nom2, lbl_e_cor, t_cor, lbl_e_est, c_est, lbl_e_pag, c_pag, t_deu });
+            CheckBox chk_e_padrinos = new CheckBox() { Text = "¿Con Padrinos?", Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), Location = new Point(520, 95), AutoSize = true };
+            Label lbl_e_est_pad = new Label() { Text = "Est. Civil:", Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), Location = new Point(665, 96), AutoSize = true };
+            ComboBox cb_e_est_pad = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(740, 93), Width = 140 };
+            cb_e_est_pad.Items.AddRange(new string[] { "Soltero(a)", "Casado(a)" });
+            cb_e_est_pad.SelectedIndex = 0;
+
+            f_edit.Controls.AddRange(new Control[] { lbl_e_est, c_est, lbl_e_pag, c_pag, t_deu, chk_e_padrinos, lbl_e_est_pad, cb_e_est_pad });
 
             Panel f_req_edit = new Panel();
-            f_req_edit.Location = new Point(20, 165);
-            f_req_edit.Size = new Size(860, 155);
+            f_req_edit.Location = new Point(20, 135);
+            f_req_edit.Size = new Size(890, 180);
             f_req_edit.BackColor = ColorTranslator.FromHtml("#f8fafc");
             f_req_edit.BorderStyle = BorderStyle.FixedSingle;
 
-            Label lblReqEditTit = new Label() { Text = "Requisitos de Documentación:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
+            Label lblReqEditTit = new Label() { Text = "Requisitos de Documentación:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
             f_req_edit.Controls.Add(lblReqEditTit);
 
             this.chks_edit.Clear();
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
             {
                 CheckBox chk = new CheckBox();
                 chk.AutoSize = true;
                 int col = i % 2;
                 int fila = i / 2;
-                chk.Location = new Point(20 + (col * 400), 38 + (fila * 26));
+                chk.Location = new Point(20 + (col * 430), 34 + (fila * 27));
                 this.chks_edit.Add(chk);
                 f_req_edit.Controls.Add(chk);
             }
             f_edit.Controls.Add(f_req_edit);
 
-            Panel f_obs_izq_edit = new Panel() { Location = new Point(20, 330), Size = new Size(420, 165), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
-            Label lblObsGenE = new Label() { Text = "Observación Generada:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
-            TextBox txt_obs_auto_edit = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 35), Size = new Size(390, 115), BackColor = Color.White };
-            f_obs_izq_edit.Controls.Add(lblObsGenE);
-            f_obs_izq_edit.Controls.Add(txt_obs_auto_edit);
+            Panel f_obs_izq_edit = new Panel() { Location = new Point(20, 325), Size = new Size(435, 160), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            Label lblObsGenE = new Label() { Text = "Observación Generada:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
+            TextBox txt_obs_auto_edit = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 32), Size = new Size(405, 112), BackColor = Color.White };
+            f_obs_izq_edit.Controls.AddRange(new Control[] { lblObsGenE, txt_obs_auto_edit });
             f_edit.Controls.Add(f_obs_izq_edit);
 
-            Panel f_obs_der_edit = new Panel() { Location = new Point(460, 330), Size = new Size(420, 165), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
-            CheckBox chk_adic_edit = new CheckBox() { Text = "¿Añadir/Ver observación adicional manual?", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
-            TextBox txt_obs_adic_edit = new TextBox() { Multiline = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 35), Size = new Size(390, 115), Visible = false };
-            f_obs_der_edit.Controls.Add(chk_adic_edit);
-            f_obs_der_edit.Controls.Add(txt_obs_adic_edit);
+            Panel f_obs_der_edit = new Panel() { Location = new Point(475, 325), Size = new Size(435, 160), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            CheckBox chk_adic_edit = new CheckBox() { Text = "¿Añadir/Ver observación adicional manual?", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
+            TextBox txt_obs_adic_edit = new TextBox() { Multiline = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 32), Size = new Size(405, 112), Visible = false };
+            f_obs_der_edit.Controls.AddRange(new Control[] { chk_adic_edit, txt_obs_adic_edit });
             f_edit.Controls.Add(f_obs_der_edit);
 
-            Label lblFecOf = new Label() { Text = "Fecha Oficial:", Location = new Point(20, 515), Size = new Size(100, 25) };
-            TextBox t_fec = new TextBox() { Location = new Point(125, 513), Width = 140 };
+            Label lblFecOf = new Label() { Text = "Fecha Oficial:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 505), Size = new Size(105, 25) };
+            TextBox t_fec = new TextBox() { Location = new Point(130, 502), Width = 140 };
             AsignarPlaceholder(t_fec, "DD/MM/AAAA");
             this.adjuntar_validacion(t_fec, "fecha");
 
-            Label lblLib = new Label() { Text = "Libro:", Location = new Point(285, 515), AutoSize = true };
-            TextBox t_l = new TextBox() { Location = new Point(335, 513), Width = 60 };
+            Label lblLib = new Label() { Text = "Libro:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(300, 505), AutoSize = true };
+            TextBox t_l = new TextBox() { Location = new Point(355, 502), Width = 75 };
             AsignarPlaceholder(t_l, "---");
             this.adjuntar_validacion(t_l, "registro_libro");
 
-            Label lblFol = new Label() { Text = "Folio:", Location = new Point(415, 515), AutoSize = true };
-            TextBox t_f = new TextBox() { Location = new Point(465, 513), Width = 60 };
+            Label lblFol = new Label() { Text = "Folio:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(460, 505), AutoSize = true };
+            TextBox t_f = new TextBox() { Location = new Point(515, 502), Width = 75 };
             AsignarPlaceholder(t_f, "---");
             this.adjuntar_validacion(t_f, "registro_libro");
 
-            Label lblAsi = new Label() { Text = "Asiento:", Location = new Point(545, 515), AutoSize = true };
-            TextBox t_a = new TextBox() { Location = new Point(610, 513), Width = 60 };
+            Label lblAsi = new Label() { Text = "Asiento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(620, 505), AutoSize = true };
+            TextBox t_a = new TextBox() { Location = new Point(690, 502), Width = 75 };
             AsignarPlaceholder(t_a, "---");
             this.adjuntar_validacion(t_a, "registro_libro");
 
             f_edit.Controls.AddRange(new Control[] { lblFecOf, t_fec, lblLib, t_l, lblFol, t_f, lblAsi, t_a });
 
-            Button btn_act = CrearBotonAccion("Actualizar Datos", ColorTranslator.FromHtml("#2563eb"), new Point(180, 570), new Size(180, 42));
-            Button btn_env = CrearBotonAccion("Enviar por Correo", ColorTranslator.FromHtml("#10b981"), new Point(380, 570), new Size(180, 42));
-            Button btn_eli = CrearBotonAccion("Eliminar", ColorTranslator.FromHtml("#ef4444"), new Point(580, 570), new Size(150, 42));
+            Button btn_act = CrearBotonAccion("Actualizar Datos", ColorTranslator.FromHtml("#2563eb"), new Point(250, 560), new Size(210, 44), 11f);
+            Button btn_eli = CrearBotonAccion("Eliminar Expediente", ColorTranslator.FromHtml("#ef4444"), new Point(485, 560), new Size(210, 44), 11f);
 
-            f_edit.Controls.AddRange(new Control[] { btn_act, btn_env, btn_eli });
+            f_edit.Controls.AddRange(new Control[] { btn_act, btn_eli });
             this.content_frame.Controls.Add(f_edit);
 
             Action actualizar_obs_auto_edit = () =>
             {
+                if (cargandoEdicion)
+                {
+                    return;
+                }
                 List<string> faltantes = new List<string>();
                 for (int j = 0; j < this.reqs_activos_edit; j++)
                 {
@@ -2199,10 +1978,58 @@ namespace SIGEP_App
                 }
             };
 
-            for (int i = 0; i < 8; i++)
+            Action reconstruir_requisitos_edicion = () =>
+            {
+                if (idx_actual < 0 || idx_actual >= this.db.tipos.Count)
+                {
+                    return;
+                }
+                string tipo = this.db.tipos[idx_actual];
+                bool tienePad = chk_e_padrinos.Checked;
+                string estPad = cb_e_est_pad.SelectedItem != null ? cb_e_est_pad.SelectedItem.ToString() : "Soltero(a)";
+
+                chk_e_padrinos.Visible = (tipo != "Matrimonio");
+                lbl_e_est_pad.Visible = ((tipo == "Bautizo" || tipo == "Confirmación") && tienePad);
+                cb_e_est_pad.Visible = ((tipo == "Bautizo" || tipo == "Confirmación") && tienePad);
+
+                string[] reqs = this.ObtenerRequisitosSacramento(tipo, tienePad, estPad);
+                this.reqs_activos_edit = reqs.Length;
+                for (int k = 0; k < this.chks_edit.Count; k++)
+                {
+                    if (k < reqs.Length)
+                    {
+                        this.chks_edit[k].Text = reqs[k];
+                        this.chks_edit[k].Visible = true;
+                    }
+                    else
+                    {
+                        this.chks_edit[k].Visible = false;
+                        this.chks_edit[k].Checked = false;
+                    }
+                }
+                actualizar_obs_auto_edit();
+            };
+
+            for (int i = 0; i < 9; i++)
             {
                 this.chks_edit[i].CheckedChanged += (s, e) => actualizar_obs_auto_edit();
             }
+
+            chk_e_padrinos.CheckedChanged += (s, e) =>
+            {
+                if (!cargandoEdicion)
+                {
+                    reconstruir_requisitos_edicion();
+                }
+            };
+
+            cb_e_est_pad.SelectedIndexChanged += (s, e) =>
+            {
+                if (!cargandoEdicion)
+                {
+                    reconstruir_requisitos_edicion();
+                }
+            };
 
             c_pag.SelectedIndexChanged += (s, e) =>
             {
@@ -2231,230 +2058,385 @@ namespace SIGEP_App
                 }
             };
 
-            Action<bool> buscar = (mostrarAlerta) =>
+            Action<int> cargarExpedienteEnEditor = (idx) =>
             {
-                string dni_val = txt_bus.Text.Trim();
-                if (dni_val == "")
+                if (idx < 0 || idx >= this.db.dnis_prin.Count)
                 {
-                    MessageBox.Show("No ha ingresado un DNI.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                if (dni_val.Length != 8 || dni_val == "00000000")
-                {
-                    MessageBox.Show("El DNI ingresado es incorrecto. Debe contener exactamente 8 dígitos numéricos válidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    f_edit.Visible = false;
                     return;
                 }
 
-                int idx = this.db.buscar_por_dni(dni_val);
-                if (idx != -1)
+                cargandoEdicion = true;
+                idx_actual = idx;
+                f_edit.Visible = true;
+
+                string tipo = this.db.tipos[idx];
+                bool esMatrimonio = (tipo == "Matrimonio");
+
+                if (tipo == "Bautizo")
                 {
-                    if (this.db.checks_mem[idx].StartsWith("HIST|"))
-                    {
-                        f_edit.Visible = false;
-                        MessageBox.Show("El DNI ingresado corresponde a una Constancia Antigua de " + this.db.nombres[idx] + ".\n\nPor favor, edite o gestione este registro desde el módulo 'Opciones Avanzadas'.", "Constancia Antigua Detectada", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
+                    lbl_e_dni1.Text = "DNI Bautizado:";
+                }
+                else if (tipo == "Primera Comunión")
+                {
+                    lbl_e_dni1.Text = "DNI Comulgante:";
+                }
+                else if (tipo == "Confirmación")
+                {
+                    lbl_e_dni1.Text = "DNI Confirmando:";
+                }
+                else
+                {
+                    lbl_e_dni1.Text = "DNI Novio:";
+                }
 
-                    idx_actual = idx;
-                    f_edit.Visible = true;
+                lbl_e_dni2.Visible = esMatrimonio;
+                t_dni2.Visible = esMatrimonio;
+                lbl_e_nom2.Visible = esMatrimonio;
+                t_nom2.Visible = esMatrimonio;
+                lbl_e_ape2.Visible = esMatrimonio;
+                t_ape2.Visible = esMatrimonio;
 
-                    string tipo = this.db.tipos[idx];
-                    string[] reqs = new string[0];
-                    if (tipo == "Bautizo")
-                    {
-                        reqs = new string[] { "1. Copia DNI Bautizado", "2. Partida Nacimiento", "3. Copia DNI Padre", "4. Copia DNI Madre", "5. Copia DNI Padrino", "6. Copia DNI Madrina" };
-                        lbl_e_dni1.Text = "DNI Bautizado:";
-                        lbl_e_dni2.Text = "DNI Apoderado:";
-                        lbl_e_nom1.Text = "Bautizado:";
-                        lbl_e_nom2.Text = "Apoderado:";
-                    }
-                    else if (tipo == "Primera Comunión")
-                    {
-                        reqs = new string[] { "1. Copia DNI Comulgante", "2. Partida Bautismo", "3. Copia DNI Padre", "4. Copia DNI Madre" };
-                        lbl_e_dni1.Text = "DNI Comulgante:";
-                        lbl_e_dni2.Text = "DNI Apoderado:";
-                        lbl_e_nom1.Text = "Comulgante:";
-                        lbl_e_nom2.Text = "Apoderado:";
-                    }
-                    else if (tipo == "Confirmación")
-                    {
-                        reqs = new string[] { "1. Copia DNI Confirmando", "2. Partida Bautismo", "3. Const. 1ra Comunión", "4. Copia DNI Padrino/Madrina", "5. Const. Sacram Padrino" };
-                        lbl_e_dni1.Text = "DNI Confirmando:";
-                        lbl_e_dni2.Text = "DNI Apoderado:";
-                        lbl_e_nom1.Text = "Confirmando:";
-                        lbl_e_nom2.Text = "Apoderado:";
-                    }
-                    else if (tipo == "Matrimonio Regular")
-                    {
-                        reqs = new string[] { "1. Copia DNI Novio", "2. Copia DNI Novia", "3. Partida Bautismo Novio", "4. Partida Bautismo Novia", "5. Confirmación Novio", "6. Confirmación Novia", "7. Copia DNI Testigo 1", "8. Copia DNI Testigo 2" };
-                        lbl_e_dni1.Text = "DNI Novio:";
-                        lbl_e_dni2.Text = "DNI Novia:";
-                        lbl_e_nom1.Text = "Novio:";
-                        lbl_e_nom2.Text = "Novia:";
-                    }
+                t_dni1.Text = this.db.dnis_prin[idx];
+                t_nom1.Text = this.db.nombres[idx].ToUpper();
+                t_ape1.Text = this.db.apellidos[idx].ToUpper();
 
-                    this.reqs_activos_edit = reqs.Length;
-                    string[] memoria = this.db.checks_mem[idx].Split(',');
-                    for (int k = 0; k < this.chks_edit.Count; k++)
-                    {
-                        if (k < reqs.Length)
-                        {
-                            this.chks_edit[k].Text = reqs[k];
-                            this.chks_edit[k].Visible = true;
-                            if (k < memoria.Length && memoria[k] == "1")
-                            {
-                                this.chks_edit[k].Checked = true;
-                            }
-                            else
-                            {
-                                this.chks_edit[k].Checked = false;
-                            }
-                        }
-                        else
-                        {
-                            this.chks_edit[k].Visible = false;
-                            this.chks_edit[k].Checked = false;
-                        }
-                    }
+                if (esMatrimonio)
+                {
+                    t_dni2.Text = (this.db.dnis_sec[idx] != "---") ? this.db.dnis_sec[idx] : "";
+                    t_nom2.Text = (this.db.nombres_sec[idx] != "---") ? this.db.nombres_sec[idx].ToUpper() : "";
+                    t_ape2.Text = (this.db.apellidos_sec[idx] != "---") ? this.db.apellidos_sec[idx].ToUpper() : "";
+                }
+                else
+                {
+                    t_dni2.Text = "";
+                    t_nom2.Text = "";
+                    t_ape2.Text = "";
+                }
 
-                    t_dni1.Text = this.db.dnis_prin[idx];
-                    t_dni2.Text = this.db.dnis_sec[idx];
-                    t_nom.Text = this.db.nombres[idx];
-                    t_nom2.Text = this.db.nombres_sec[idx];
-                    t_cor.Text = this.db.correos[idx];
+                chk_e_padrinos.Checked = (this.db.tiene_padrinos[idx] == "SI");
+                if (this.db.estado_padrinos[idx] == "Casado(a)")
+                {
+                    cb_e_est_pad.SelectedItem = "Casado(a)";
+                }
+                else
+                {
+                    cb_e_est_pad.SelectedItem = "Soltero(a)";
+                }
+
+                reconstruir_requisitos_edicion();
+
+                string[] memoria = this.db.checks_mem[idx].Split(new char[] { '-', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int k = 0; k < this.reqs_activos_edit; k++)
+                {
+                    if (k < memoria.Length && memoria[k] == "1")
+                    {
+                        this.chks_edit[k].Checked = true;
+                    }
+                    else
+                    {
+                        this.chks_edit[k].Checked = false;
+                    }
+                }
+
+                if (c_est.Items.Contains(this.db.estados[idx]))
+                {
                     c_est.SelectedItem = this.db.estados[idx];
+                }
+                else
+                {
+                    c_est.SelectedIndex = 0;
+                }
+
+                if (c_pag.Items.Contains(this.db.pagos[idx]))
+                {
                     c_pag.SelectedItem = this.db.pagos[idx];
+                }
+                else
+                {
+                    c_pag.SelectedIndex = 0;
+                }
+
+                if (this.db.pagos[idx] == "Pagado")
+                {
+                    t_deu.Visible = false;
+                    t_deu.Text = "";
+                }
+                else
+                {
+                    t_deu.Visible = true;
                     t_deu.Text = this.db.deudas[idx];
+                }
 
-                    if (this.db.pagos[idx] == "Pagado")
+                if (!string.IsNullOrEmpty(this.db.obs_adic[idx]))
+                {
+                    chk_adic_edit.Checked = true;
+                    txt_obs_adic_edit.Visible = true;
+                    txt_obs_adic_edit.Text = this.db.obs_adic[idx];
+                }
+                else
+                {
+                    chk_adic_edit.Checked = false;
+                    txt_obs_adic_edit.Visible = false;
+                    txt_obs_adic_edit.Text = "";
+                }
+
+                t_fec.Text = (this.db.fechas_sac[idx] != "Por Programar") ? this.db.fechas_sac[idx] : "";
+                t_l.Text = (this.db.libros[idx] != "---") ? this.db.libros[idx] : "";
+                t_f.Text = (this.db.folios[idx] != "---") ? this.db.folios[idx] : "";
+                t_a.Text = (this.db.asientos[idx] != "---") ? this.db.asientos[idx] : "";
+
+                cargandoEdicion = false;
+                actualizar_obs_auto_edit();
+                f_edit.Invalidate();
+            };
+
+            Action<List<int>, bool> poblarTablaResultados = (indices, mostrarMensaje) =>
+            {
+                llenandoTabla = true;
+                tablaResultados.Rows.Clear();
+                for (int r = 0; r < indices.Count; r++)
+                {
+                    int idx = indices[r];
+                    string dniMostrar = this.db.dnis_prin[idx];
+                    string nomMostrar = this.db.nombres[idx];
+                    string apeMostrar = this.db.apellidos[idx];
+
+                    if (this.db.tipos[idx] == "Matrimonio" && this.db.dnis_sec[idx] != "---")
                     {
-                        t_deu.Visible = false;
-                    }
-                    else
-                    {
-                        t_deu.Visible = true;
+                        dniMostrar = this.db.dnis_prin[idx] + " / " + this.db.dnis_sec[idx];
+                        nomMostrar = this.db.nombres[idx] + " / " + this.db.nombres_sec[idx];
+                        apeMostrar = this.db.apellidos[idx] + " / " + this.db.apellidos_sec[idx];
                     }
 
-                    if (this.db.obs_adic[idx] != "")
-                    {
-                        chk_adic_edit.Checked = true;
-                        txt_obs_adic_edit.Text = this.db.obs_adic[idx];
-                    }
-                    else
-                    {
-                        chk_adic_edit.Checked = false;
-                        txt_obs_adic_edit.Text = "";
-                    }
+                    int filaIdx = tablaResultados.Rows.Add(
+                        dniMostrar,
+                        nomMostrar,
+                        apeMostrar,
+                        this.db.tipos[idx],
+                        this.db.estados[idx],
+                        this.db.pagos[idx]
+                    );
+                    tablaResultados.Rows[filaIdx].Tag = idx;
+                }
+                llenandoTabla = false;
 
-                    if (this.db.fechas_sac[idx] != "Por Programar")
+                if (indices.Count > 0)
+                {
+                    tablaResultados.Rows[0].Selected = true;
+                    cargarExpedienteEnEditor(indices[0]);
+                    if (mostrarMensaje)
                     {
-                        t_fec.Text = this.db.fechas_sac[idx];
-                    }
-                    else
-                    {
-                        t_fec.Text = "";
-                    }
-
-                    t_l.Text = (this.db.libros[idx] != "---") ? this.db.libros[idx] : "";
-                    t_f.Text = (this.db.folios[idx] != "---") ? this.db.folios[idx] : "";
-                    t_a.Text = (this.db.asientos[idx] != "---") ? this.db.asientos[idx] : "";
-
-                    actualizar_obs_auto_edit();
-                    f_edit.Invalidate();
-
-                    if (mostrarAlerta)
-                    {
-                        MessageBox.Show("Expediente de " + this.db.nombres[idx] + " encontrado.", "Búsqueda Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("Se encontraron " + indices.Count + " expediente(s). Puede seleccionarlos en la tabla para ver o editar sus datos.", "Búsqueda Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
                 else
                 {
                     f_edit.Visible = false;
-                    MessageBox.Show("No se encontraron expedientes con ese DNI.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (mostrarMensaje)
+                    {
+                        MessageBox.Show("No se encontraron expedientes en trámite con ese criterio.", "Sin Resultados", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
                 }
             };
 
-            btnConsultar.Click += (s, e) => buscar(true);
-
-            Action<bool> ejecutar_accion = (enviar_correo) =>
+            tablaResultados.CellClick += (s, e) =>
             {
+                if (!llenandoTabla && e.RowIndex >= 0 && tablaResultados.Rows[e.RowIndex].Tag != null)
+                {
+                    int idxSel = (int)tablaResultados.Rows[e.RowIndex].Tag;
+                    cargarExpedienteEnEditor(idxSel);
+                }
+            };
+
+            tablaResultados.SelectionChanged += (s, e) =>
+            {
+                if (!llenandoTabla && tablaResultados.SelectedRows.Count > 0 && tablaResultados.SelectedRows[0].Tag != null)
+                {
+                    int idxSel = (int)tablaResultados.SelectedRows[0].Tag;
+                    if (idxSel != idx_actual)
+                    {
+                        cargarExpedienteEnEditor(idxSel);
+                    }
+                }
+            };
+
+            Action<bool> ejecutarBusqueda = (conAlerta) =>
+            {
+                string modo = cb_criterio.SelectedItem.ToString();
+                if (modo == "DNI")
+                {
+                    string dni_val = txt_bus_dni.Text.Trim();
+                    if (dni_val == "")
+                    {
+                        MessageBox.Show("No ha ingresado ningún número de DNI para buscar.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    if (dni_val.Length != 8 || dni_val == "00000000")
+                    {
+                        MessageBox.Show("El DNI ingresado es incorrecto. Debe contener exactamente 8 dígitos numéricos válidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    List<int> res = this.db.buscar_indices_por_dni(dni_val, true);
+                    if (res.Count == 0)
+                    {
+                        List<int> resAntiguo = this.db.buscar_indices_por_dni(dni_val, false);
+                        if (resAntiguo.Count > 0)
+                        {
+                            MessageBox.Show("El DNI " + dni_val + " pertenece a una Constancia Antigua registrada en 'Opciones Avanzadas'. Diríjase a esa pestaña para editarlo.", "Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+                    }
+                    poblarTablaResultados(res, conAlerta);
+                }
+                else
+                {
+                    string ape_val = Regex.Replace(txt_bus_ape.Text.Trim().ToUpper(), @"\s+", " ");
+                    txt_bus_ape.Text = ape_val;
+                    if (ape_val == "")
+                    {
+                        MessageBox.Show("No ha ingresado ningún apellido para buscar.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    if (!this.EsNombreValido(ape_val))
+                    {
+                        MessageBox.Show("Ingrese al menos 2 letras válidas para buscar por apellidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    List<int> res = this.db.buscar_indices_por_apellidos(ape_val, true);
+                    if (res.Count == 0)
+                    {
+                        List<int> resAntiguo = this.db.buscar_indices_por_apellidos(ape_val, false);
+                        if (resAntiguo.Count > 0)
+                        {
+                            MessageBox.Show("El apellido '" + ape_val + "' corresponde a una Constancia Antigua registrada en 'Opciones Avanzadas'.", "Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+                    }
+                    poblarTablaResultados(res, conAlerta);
+                }
+            };
+
+            btnConsultar.Click += (s, e) => ejecutarBusqueda(true);
+
+            txt_bus_dni.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    ejecutarBusqueda(true);
+                }
+            };
+
+            txt_bus_ape.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    ejecutarBusqueda(true);
+                }
+            };
+
+            Action mostrarTodosTramites = () =>
+            {
+                List<int> todos = new List<int>();
+                for (int i = 0; i < this.db.dnis_prin.Count; i++)
+                {
+                    if (this.db.origenes[i] != "ANTIGUO")
+                    {
+                        todos.Add(i);
+                    }
+                }
+                poblarTablaResultados(todos, false);
+            };
+
+            btnMostrarTodos.Click += (s, e) => mostrarTodosTramites();
+
+            // Carga inicial automática de los expedientes al abrir Buscar y Editar
+            mostrarTodosTramites();
+
+            btn_act.Click += (s, e) =>
+            {
+                if (idx_actual < 0 || idx_actual >= this.db.dnis_prin.Count)
+                {
+                    return;
+                }
+
+                int i = idx_actual;
+                string tipo_actual = this.db.tipos[i];
                 string dni1_val = t_dni1.Text.Trim();
-                string dni2_val = t_dni2.Text.Trim();
-                string nom1_val = Regex.Replace(t_nom.Text.Trim(), @"\s+", " ");
-                string nom2_val = Regex.Replace(t_nom2.Text.Trim(), @"\s+", " ");
+                string nom1_val = Regex.Replace(t_nom1.Text.Trim().ToUpper(), @"\s+", " ");
+                string ape1_val = Regex.Replace(t_ape1.Text.Trim().ToUpper(), @"\s+", " ");
+
+                string dni2_val = "---";
+                string nom2_val = "---";
+                string ape2_val = "---";
 
                 if (dni1_val.Length != 8 || dni1_val == "00000000")
                 {
                     MessageBox.Show("El DNI principal debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                if (dni2_val.Length != 8 || dni2_val == "00000000")
-                {
-                    MessageBox.Show("El DNI secundario debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                if (dni1_val == dni2_val)
-                {
-                    MessageBox.Show("No se pueden colocar 2 DNIs iguales. El DNI del titular y el secundario deben ser diferentes.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
                 if (!this.EsNombreValido(nom1_val))
                 {
-                    MessageBox.Show("El nombre del titular debe contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Los Nombres del titular deben contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                if (!this.EsNombreValido(nom2_val))
+                if (!this.EsNombreValido(ape1_val))
                 {
-                    MessageBox.Show("El nombre secundario debe contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                if (nom1_val.ToLower() == nom2_val.ToLower())
-                {
-                    MessageBox.Show("El nombre del titular y el nombre secundario no pueden ser iguales.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Los Apellidos del titular deben contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                int i = idx_actual;
-
-                for (int idxExist = 0; idxExist < this.db.dnis_prin.Count; idxExist++)
+                if (tipo_actual == "Matrimonio")
                 {
-                    if (idxExist != i && this.db.dnis_prin[idxExist] == dni1_val && this.db.tipos[idxExist] == this.db.tipos[i])
+                    dni2_val = t_dni2.Text.Trim();
+                    nom2_val = Regex.Replace(t_nom2.Text.Trim().ToUpper(), @"\s+", " ");
+                    ape2_val = Regex.Replace(t_ape2.Text.Trim().ToUpper(), @"\s+", " ");
+
+                    if (dni2_val.Length != 8 || dni2_val == "00000000")
                     {
-                        MessageBox.Show("Ya existe otro expediente de " + this.db.tipos[i] + " con el DNI " + dni1_val + ".", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("El DNI de la Novia debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    if (!this.EsNombreValido(nom2_val) || !this.EsNombreValido(ape2_val))
+                    {
+                        MessageBox.Show("Los Nombres y Apellidos de la Novia son obligatorios.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    if (dni1_val == dni2_val)
+                    {
+                        MessageBox.Show("No se pueden colocar 2 DNIs iguales. Los DNIs de los novios deben ser diferentes.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    if ((nom1_val + " " + ape1_val) == (nom2_val + " " + ape2_val))
+                    {
+                        MessageBox.Show("Los nombres y apellidos de los novios no pueden ser iguales.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                 }
 
-                string correos_edit = t_cor.Text.Trim();
-                if (correos_edit != "")
+                for (int idxExist = 0; idxExist < this.db.dnis_prin.Count; idxExist++)
                 {
-                    string[] lista_correos = correos_edit.Split(',');
-                    for (int c = 0; c < lista_correos.Length; c++)
+                    if (idxExist != i && this.db.tipos[idxExist] == tipo_actual)
                     {
-                        if (!this.logica.validar_correo_regex(lista_correos[c].Trim()))
+                        if (this.db.dnis_prin[idxExist] == dni1_val || (tipo_actual == "Matrimonio" && this.db.dnis_sec[idxExist] == dni1_val))
                         {
-                            MessageBox.Show("El correo '" + lista_correos[c].Trim() + "' no es válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show("Ya existe otro expediente de " + tipo_actual + " con el DNI " + dni1_val + ".", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             return;
                         }
                     }
                 }
 
-                if (this.db.tipos[i] == "Primera Comunión")
+                if (tipo_actual == "Primera Comunión" && this.config.fecha_comunion == "--/--")
                 {
-                    if (this.config.fecha_comunion == "--/--")
-                    {
-                        MessageBox.Show("Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
+                    MessageBox.Show("Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
-
-                if (this.db.tipos[i] == "Confirmación")
+                if (tipo_actual == "Confirmación" && this.config.fecha_confirmacion == "--/--")
                 {
-                    if (this.config.fecha_confirmacion == "--/--")
-                    {
-                        MessageBox.Show("Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
+                    MessageBox.Show("Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
 
                 string f_v = t_fec.Text.Trim();
@@ -2465,15 +2447,7 @@ namespace SIGEP_App
                 else
                 {
                     DateTime fecha_obj;
-                    if (DateTime.TryParseExact(f_v, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha_obj))
-                    {
-                        if (fecha_obj.Date < DateTime.Now.Date)
-                        {
-                            MessageBox.Show("La Fecha Oficial programada no puede ser una fecha antigua (pasada).", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-                    else
+                    if (!DateTime.TryParseExact(f_v, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha_obj))
                     {
                         MessageBox.Show("El formato de la Fecha Oficial debe ser una fecha válida: DD/MM/AAAA.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
@@ -2487,28 +2461,14 @@ namespace SIGEP_App
                 if (pago_elegido == "Falta Pagar")
                 {
                     deuda_nueva = t_deu.Text.Trim();
-                    if (deuda_nueva == "")
-                    {
-                        MessageBox.Show("Debe especificar el monto de la deuda.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
                     double deuda_float = 0;
-                    if (double.TryParse(deuda_nueva, NumberStyles.Any, CultureInfo.InvariantCulture, out deuda_float))
+                    if (deuda_nueva == "" || !double.TryParse(deuda_nueva, NumberStyles.Any, CultureInfo.InvariantCulture, out deuda_float) || deuda_float <= 0)
                     {
-                        if (deuda_float <= 0)
-                        {
-                            MessageBox.Show("El monto de la deuda debe ser mayor a 0 si indica 'Falta Pagar'.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show("El monto de la deuda no es válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Debe especificar un monto de deuda válido mayor a 0.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                 }
 
-                string obs_auto_txt = txt_obs_auto_edit.Text.Trim();
                 string obs_adic_txt = "";
                 if (chk_adic_edit.Checked)
                 {
@@ -2535,10 +2495,7 @@ namespace SIGEP_App
                     MessageBox.Show("El Libro solo admite números enteros positivos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                if (l_v == "")
-                {
-                    l_v = "---";
-                }
+                if (l_v == "") l_v = "---";
 
                 string f_val = t_f.Text.Trim();
                 if (f_val != "" && !this.EsNumeroPositivoValido(f_val))
@@ -2546,10 +2503,7 @@ namespace SIGEP_App
                     MessageBox.Show("El Folio solo admite números enteros positivos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                if (f_val == "")
-                {
-                    f_val = "---";
-                }
+                if (f_val == "") f_val = "---";
 
                 string a_v = t_a.Text.Trim();
                 if (a_v != "" && !this.EsNumeroPositivoValido(a_v))
@@ -2557,18 +2511,12 @@ namespace SIGEP_App
                     MessageBox.Show("El Asiento solo admite números enteros positivos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                if (a_v == "")
-                {
-                    a_v = "---";
-                }
+                if (a_v == "") a_v = "---";
 
-                if (estado_elegido == "Inscrito(a)")
+                if (estado_elegido == "Inscrito(a)" && (!completos || pago_elegido == "Falta Pagar"))
                 {
-                    if (!completos || pago_elegido == "Falta Pagar")
-                    {
-                        MessageBox.Show("No se puede establecer el estado como 'Inscrito(a)' si faltan requisitos físicos o tiene deuda pendiente.", "Estado Inconsistente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
+                    MessageBox.Show("No se puede establecer el estado como 'Inscrito(a)' si faltan requisitos físicos o tiene deuda pendiente.", "Estado Inconsistente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
 
                 if (estado_elegido == "Finalizado")
@@ -2580,113 +2528,80 @@ namespace SIGEP_App
                     }
                     if (l_v == "---" || f_val == "---" || a_v == "---")
                     {
-                        MessageBox.Show("Para finalizar el expediente y emitir la partida oficial, debe completar los números positivos de Libro, Folio y Asiento.", "Datos de Registro Faltantes", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Para finalizar el expediente debe completar los números positivos de Libro, Folio y Asiento.", "Datos de Registro Faltantes", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
+                }
+
+                DialogResult res = MessageBox.Show("¿Está seguro de actualizar los datos en el sistema?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (res != DialogResult.Yes)
+                {
+                    return;
                 }
 
                 List<string> lista_chks_e = new List<string>();
                 for (int j = 0; j < this.reqs_activos_edit; j++)
                 {
-                    if (this.chks_edit[j].Checked)
-                    {
-                        lista_chks_e.Add("1");
-                    }
-                    else
-                    {
-                        lista_chks_e.Add("0");
-                    }
+                    lista_chks_e.Add(this.chks_edit[j].Checked ? "1" : "0");
                 }
-                string chks_str = string.Join(",", lista_chks_e);
+                string chks_str = string.Join("-", lista_chks_e);
+                string t_pad_str = (tipo_actual == "Matrimonio") ? "SI" : (chk_e_padrinos.Checked ? "SI" : "NO");
+                string est_pad_str = ((tipo_actual == "Bautizo" || tipo_actual == "Confirmación") && chk_e_padrinos.Checked) ? cb_e_est_pad.SelectedItem.ToString() : "---";
 
-                this.db.actualizar_completo(i, dni1_val, dni2_val, nom1_val, nom2_val, correos_edit, this.db.generos[i], estado_elegido, obs_auto_txt, obs_adic_txt, chks_str, f_v, l_v, f_val, a_v, pago_elegido, deuda_nueva);
+                this.db.actualizar_completo(
+                    i,
+                    dni1_val,
+                    nom1_val,
+                    ape1_val,
+                    dni2_val,
+                    nom2_val,
+                    ape2_val,
+                    this.db.generos[i],
+                    tipo_actual,
+                    estado_elegido,
+                    t_pad_str,
+                    est_pad_str,
+                    chks_str,
+                    txt_obs_auto_edit.Text.Trim(),
+                    obs_adic_txt,
+                    f_v,
+                    l_v,
+                    f_val,
+                    a_v,
+                    pago_elegido,
+                    deuda_nueva
+                );
 
-                if (!enviar_correo)
+                MessageBox.Show("Datos del expediente actualizados correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                cargarExpedienteEnEditor(i);
+
+                for (int r = 0; r < tablaResultados.Rows.Count; r++)
                 {
-                    MessageBox.Show("Datos actualizados en el sistema.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    if (correos_edit == "")
+                    if ((int)tablaResultados.Rows[r].Tag == i)
                     {
-                        MessageBox.Show("No hay ningún correo registrado. Los datos fueron guardados, pero no se enviará notificación.", "Atención", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        buscar(false);
-                        return;
+                        tablaResultados.Rows[r].Cells[0].Value = (tipo_actual == "Matrimonio" && dni2_val != "---") ? (dni1_val + " / " + dni2_val) : dni1_val;
+                        tablaResultados.Rows[r].Cells[1].Value = (tipo_actual == "Matrimonio" && nom2_val != "---") ? (nom1_val + " / " + nom2_val) : nom1_val;
+                        tablaResultados.Rows[r].Cells[2].Value = (tipo_actual == "Matrimonio" && ape2_val != "---") ? (ape1_val + " / " + ape2_val) : ape1_val;
+                        tablaResultados.Rows[r].Cells[4].Value = estado_elegido;
+                        tablaResultados.Rows[r].Cells[5].Value = pago_elegido;
+                        break;
                     }
-
-                    if (pago_elegido == "Pagado")
-                    {
-                        if (estado_elegido == "Inscrito(a)")
-                        {
-                            string dir_temp = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "exportaciones");
-                            if (!Directory.Exists(dir_temp))
-                            {
-                                Directory.CreateDirectory(dir_temp);
-                            }
-                            string ruta_pdf = Path.Combine(dir_temp, "Constancia_" + this.db.dnis_prin[i] + ".pdf");
-
-                            string dni_impreso = this.db.dnis_prin[i];
-                            if (this.db.tipos[i] == "Matrimonio Regular")
-                            {
-                                dni_impreso = this.db.dnis_prin[i] + ", " + this.db.dnis_sec[i];
-                            }
-
-                            this.logica.generar_constancia_inscripcion(ruta_pdf, nom1_val, nom2_val, dni_impreso, this.db.generos[i], this.db.tipos[i], this.config);
-                            this.logica.enviar_correo(correos_edit, nom1_val, nom2_val, this.db.tipos[i], estado_elegido, obs_auto_txt, obs_adic_txt, pago_elegido, deuda_nueva, ruta_pdf);
-                            MessageBox.Show("Datos actualizados en el sistema y Constancia enviada a los correos.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else if (estado_elegido == "Finalizado")
-                        {
-                            string dir_temp = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "exportaciones");
-                            if (!Directory.Exists(dir_temp))
-                            {
-                                Directory.CreateDirectory(dir_temp);
-                            }
-                            string ruta_pdf = Path.Combine(dir_temp, "Partida_Oficial_" + this.db.dnis_prin[i] + ".pdf");
-                            this.logica.generar_partida_generica(ruta_pdf, nom1_val, nom2_val, this.db.tipos[i], l_v, f_val, a_v);
-                            this.logica.enviar_correo(correos_edit, nom1_val, nom2_val, this.db.tipos[i], estado_elegido, obs_auto_txt, obs_adic_txt, pago_elegido, deuda_nueva, ruta_pdf);
-                            MessageBox.Show("Datos actualizados en el sistema y Partida enviada por correo a los titulares.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            this.logica.enviar_correo(correos_edit, nom1_val, nom2_val, this.db.tipos[i], estado_elegido, obs_auto_txt, obs_adic_txt, pago_elegido, deuda_nueva);
-                            MessageBox.Show("Datos actualizados en el sistema y Notificación de actualización enviada (Sin PDF).", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                    else
-                    {
-                        this.logica.enviar_correo(correos_edit, nom1_val, nom2_val, this.db.tipos[i], estado_elegido, obs_auto_txt, obs_adic_txt, pago_elegido, deuda_nueva);
-                        MessageBox.Show("Datos actualizados en el sistema y Notificación de actualización enviada (Sin PDF).", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                }
-                buscar(false);
-            };
-
-            btn_act.Click += (s, e) =>
-            {
-                DialogResult res = MessageBox.Show("¿Está seguro de actualizar los datos en el sistema?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (res == DialogResult.Yes)
-                {
-                    ejecutar_accion(false);
-                }
-            };
-
-            btn_env.Click += (s, e) =>
-            {
-                DialogResult res = MessageBox.Show("¿Está seguro de actualizar los datos y enviar por correo?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (res == DialogResult.Yes)
-                {
-                    ejecutar_accion(true);
                 }
             };
 
             btn_eli.Click += (s, e) =>
             {
+                if (idx_actual < 0 || idx_actual >= this.db.dnis_prin.Count)
+                {
+                    return;
+                }
                 DialogResult res = MessageBox.Show("¿Está seguro de eliminar permanentemente el registro del sistema?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (res == DialogResult.Yes)
                 {
                     this.db.eliminar(idx_actual);
+                    idx_actual = -1;
                     f_edit.Visible = false;
+                    mostrarTodosTramites();
                     MessageBox.Show("Registro borrado correctamente.", "Eliminado", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             };
@@ -2707,13 +2622,13 @@ namespace SIGEP_App
 
             Panel f_filtros = new Panel();
             f_filtros.Location = new Point(40, 60);
-            f_filtros.Size = new Size(920, 65);
+            f_filtros.Size = new Size(940, 65);
             f_filtros.BackColor = ColorTranslator.FromHtml("#f1f5f9");
             f_filtros.BorderStyle = BorderStyle.FixedSingle;
 
             Label lblSac = new Label() { Text = "Sacramento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 22), AutoSize = true };
             ComboBox cb_filtro_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(110, 19), Width = 150 };
-            cb_filtro_sac.Items.AddRange(new string[] { "Todos", "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio Regular" });
+            cb_filtro_sac.Items.AddRange(new string[] { "Todos", "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
             cb_filtro_sac.SelectedItem = "Todos";
 
             Label lblFecOf = new Label() { Text = "Fecha Oficial:\n(DD/MM/AAAA)", Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), Location = new Point(280, 12), AutoSize = true };
@@ -2725,14 +2640,14 @@ namespace SIGEP_App
             cb_orden.Items.AddRange(new string[] { "Ascendente (A-Z)", "Descendente (Z-A)" });
             cb_orden.SelectedItem = "Ascendente (A-Z)";
 
-            Button btnFiltrar = CrearBotonAccion("Aplicar Filtros", ColorTranslator.FromHtml("#2563eb"), new Point(770, 15), new Size(130, 34));
+            Button btnFiltrar = CrearBotonAccion("Aplicar Filtros", ColorTranslator.FromHtml("#2563eb"), new Point(770, 15), new Size(140, 34));
 
             f_filtros.Controls.AddRange(new Control[] { lblSac, cb_filtro_sac, lblFecOf, txt_filtro_fec, lblOrd, cb_orden, btnFiltrar });
             this.content_frame.Controls.Add(f_filtros);
 
             DataGridView tabla = new DataGridView();
             tabla.Location = new Point(40, 140);
-            tabla.Size = new Size(920, 420);
+            tabla.Size = new Size(940, 420);
             tabla.BackgroundColor = Color.White;
             tabla.BorderStyle = BorderStyle.FixedSingle;
             tabla.AllowUserToAddRows = false;
@@ -2778,7 +2693,7 @@ namespace SIGEP_App
 
                 string f_sac = cb_filtro_sac.SelectedItem.ToString();
 
-                for (int i = 0; i < this.db.nombres.Count; i++)
+                for (int i = 0; i < this.db.dnis_prin.Count; i++)
                 {
                     if (f_sac != "Todos" && this.db.tipos[i] != f_sac)
                     {
@@ -2789,10 +2704,10 @@ namespace SIGEP_App
                         continue;
                     }
 
-                    string nombre_display = this.db.nombres[i];
-                    if (this.db.tipos[i] == "Matrimonio Regular")
+                    string nombre_display = this.db.ObtenerNombreCompletoTitular(i);
+                    if (this.db.tipos[i] == "Matrimonio" && this.db.ObtenerNombreCompletoConyuge(i) != "")
                     {
-                        nombre_display = this.db.nombres[i] + ",\n" + this.db.nombres_sec[i];
+                        nombre_display = nombre_display + ",\n" + this.db.ObtenerNombreCompletoConyuge(i);
                     }
 
                     string texto_est = this.db.estados[i] + "\n(" + this.db.pagos[i] + ")";
@@ -2837,11 +2752,11 @@ namespace SIGEP_App
             btnFiltrar.Click += (s, e) => actualizar_tabla(true);
             actualizar_tabla(false);
 
-            Button btnExportar = CrearBotonAccion("Exportar Resumen PDF", ColorTranslator.FromHtml("#10b981"), new Point(375, 580), new Size(250, 44), 12f);
+            Button btnExportar = CrearBotonAccion("Exportar Resumen PDF", ColorTranslator.FromHtml("#10b981"), new Point(385, 580), new Size(250, 44), 12f);
 
             btnExportar.Click += (s, e) =>
             {
-                if (this.db.nombres.Count == 0)
+                if (this.db.dnis_prin.Count == 0)
                 {
                     MessageBox.Show("No hay expedientes registrados en el sistema para exportar.", "Vacío", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
@@ -2862,7 +2777,7 @@ namespace SIGEP_App
 
                 List<ItemReporte> filtrados = new List<ItemReporte>();
 
-                for (int i = 0; i < this.db.nombres.Count; i++)
+                for (int i = 0; i < this.db.dnis_prin.Count; i++)
                 {
                     if (f_sac != "Todos" && this.db.tipos[i] != f_sac)
                     {
@@ -2873,10 +2788,10 @@ namespace SIGEP_App
                         continue;
                     }
 
-                    string nom = this.db.nombres[i];
-                    if (this.db.tipos[i] == "Matrimonio Regular")
+                    string nom = this.db.ObtenerNombreCompletoTitular(i);
+                    if (this.db.tipos[i] == "Matrimonio" && this.db.ObtenerNombreCompletoConyuge(i) != "")
                     {
-                        nom = this.db.nombres[i] + ", " + this.db.nombres_sec[i];
+                        nom = nom + ", " + this.db.ObtenerNombreCompletoConyuge(i);
                     }
 
                     string deuda_val = this.db.deudas[i];
@@ -2915,55 +2830,7 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(btnExportar);
         }
 
-        // ================= 8. OPCIONES AVANZADAS: CONSTANCIAS ANTIGUAS (EN EL MISMO CSV) =================
-        private void SepararNombreCompleto(string completo, out string nom, out string ape)
-        {
-            nom = "";
-            ape = "";
-            if (string.IsNullOrWhiteSpace(completo) || completo == "---")
-            {
-                return;
-            }
-            string[] partes = completo.Trim().Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (partes.Length >= 3)
-            {
-                ape = partes[partes.Length - 2] + " " + partes[partes.Length - 1];
-                nom = string.Join(" ", partes, 0, partes.Length - 2);
-            }
-            else if (partes.Length == 2)
-            {
-                nom = partes[0];
-                ape = partes[1];
-            }
-            else
-            {
-                nom = completo.Trim();
-            }
-        }
-
-        private void ObtenerNombresHistoricos(int idx, out string n1, out string a1, out string n2, out string a2)
-        {
-            n1 = "";
-            a1 = "";
-            n2 = "";
-            a2 = "";
-            string mem = this.db.checks_mem[idx];
-            if (mem.StartsWith("HIST|"))
-            {
-                string[] partes = mem.Split('|');
-                if (partes.Length >= 5)
-                {
-                    n1 = partes[1];
-                    a1 = partes[2];
-                    n2 = (partes[3] != "---") ? partes[3] : "";
-                    a2 = (partes[4] != "---") ? partes[4] : "";
-                    return;
-                }
-            }
-            this.SepararNombreCompleto(this.db.nombres[idx], out n1, out a1);
-            this.SepararNombreCompleto(this.db.nombres_sec[idx], out n2, out a2);
-        }
-
+        // ================= 8. OPCIONES AVANZADAS: CONSTANCIAS ANTIGUAS =================
         private void mostrar_opciones_avanzadas()
         {
             this.limpiar_contenido();
@@ -2986,49 +2853,47 @@ namespace SIGEP_App
 
             Panel f_form = new Panel();
             f_form.Location = new Point(40, 80);
-            f_form.Size = new Size(920, 275);
+            f_form.Size = new Size(940, 275);
             f_form.BackColor = Color.White;
             f_form.BorderStyle = BorderStyle.FixedSingle;
 
             int idx_hist_seleccionado = -1;
             bool cargandoDesdeTabla = false;
+            bool llenandoTablaHist = false;
 
-            // Fila 1: Selección de Sacramento
             Label lblSac = new Label() { Text = "Sacramento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 20), AutoSize = true };
             ComboBox cb_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(125, 17), Width = 200 };
-            cb_sac.Items.AddRange(new string[] { "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio Regular" });
+            cb_sac.Items.AddRange(new string[] { "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
             f_form.Controls.AddRange(new Control[] { lblSac, cb_sac });
 
-            // Fila 2: DNI, Nombre, Apellido
             Label lblDni1 = new Label() { Text = "DNI:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 65), Size = new Size(95, 25) };
             TextBox txt_dni1 = new TextBox() { Location = new Point(125, 62), Width = 120 };
             this.adjuntar_validacion(txt_dni1, "dni");
 
             Label lblNom1 = new Label() { Text = "Nombre:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(265, 65), Size = new Size(75, 25) };
-            TextBox txt_nom1 = new TextBox() { Location = new Point(345, 62), Width = 210 };
-            AsignarPlaceholder(txt_nom1, "Nombres");
+            TextBox txt_nom1 = new TextBox() { Location = new Point(345, 62), Width = 220 };
+            AsignarPlaceholder(txt_nom1, "NOMBRES");
             this.adjuntar_validacion(txt_nom1, "texto");
 
-            Label lblApe1 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(575, 65), Size = new Size(75, 25) };
-            TextBox txt_ape1 = new TextBox() { Location = new Point(655, 62), Width = 230 };
-            AsignarPlaceholder(txt_ape1, "Apellidos");
+            Label lblApe1 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 65), Size = new Size(75, 25) };
+            TextBox txt_ape1 = new TextBox() { Location = new Point(665, 62), Width = 240 };
+            AsignarPlaceholder(txt_ape1, "APELLIDOS");
             this.adjuntar_validacion(txt_ape1, "texto");
 
             f_form.Controls.AddRange(new Control[] { lblDni1, txt_dni1, lblNom1, txt_nom1, lblApe1, txt_ape1 });
 
-            // Fila 3 (Visible cuando es Matrimonio Regular)
             Label lblDni2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 108), Size = new Size(95, 25), Visible = false };
             TextBox txt_dni2 = new TextBox() { Location = new Point(125, 105), Width = 120, Visible = false };
             this.adjuntar_validacion(txt_dni2, "dni");
 
             Label lblNom2 = new Label() { Text = "Nombre:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(265, 108), Size = new Size(75, 25), Visible = false };
-            TextBox txt_nom2 = new TextBox() { Location = new Point(345, 105), Width = 210, Visible = false };
-            AsignarPlaceholder(txt_nom2, "Nombres Novia");
+            TextBox txt_nom2 = new TextBox() { Location = new Point(345, 105), Width = 220, Visible = false };
+            AsignarPlaceholder(txt_nom2, "NOMBRES NOVIA");
             this.adjuntar_validacion(txt_nom2, "texto");
 
-            Label lblApe2 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(575, 108), Size = new Size(75, 25), Visible = false };
-            TextBox txt_ape2 = new TextBox() { Location = new Point(655, 105), Width = 230, Visible = false };
-            AsignarPlaceholder(txt_ape2, "Apellidos Novia");
+            Label lblApe2 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 108), Size = new Size(75, 25), Visible = false };
+            TextBox txt_ape2 = new TextBox() { Location = new Point(665, 105), Width = 240, Visible = false };
+            AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
             this.adjuntar_validacion(txt_ape2, "texto");
 
             f_form.Controls.AddRange(new Control[] { lblDni2, txt_dni2, lblNom2, txt_nom2, lblApe2, txt_ape2 });
@@ -3036,7 +2901,6 @@ namespace SIGEP_App
             this.VincularAutocompletadoReniecSeparado(txt_dni1, txt_nom1, txt_ape1, txt_dni2, () => cargandoDesdeTabla);
             this.VincularAutocompletadoReniecSeparado(txt_dni2, txt_nom2, txt_ape2, txt_dni1, () => cargandoDesdeTabla);
 
-            // Fila 4: Fecha, Libro, Folio, Asiento
             Label lblFec = new Label() { Text = "Fecha:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 155), Size = new Size(95, 25) };
             TextBox txt_fec = new TextBox() { Location = new Point(125, 152), Width = 130 };
             AsignarPlaceholder(txt_fec, "DD/MM/AAAA");
@@ -3061,7 +2925,7 @@ namespace SIGEP_App
 
             cb_sac.SelectedIndexChanged += (s, e) =>
             {
-                bool esMatrimonio = (cb_sac.SelectedItem != null && cb_sac.SelectedItem.ToString() == "Matrimonio Regular");
+                bool esMatrimonio = (cb_sac.SelectedItem != null && cb_sac.SelectedItem.ToString() == "Matrimonio");
                 lblDni1.Text = esMatrimonio ? "DNI Novio:" : "DNI:";
                 lblDni2.Visible = esMatrimonio;
                 txt_dni2.Visible = esMatrimonio;
@@ -3080,19 +2944,17 @@ namespace SIGEP_App
             };
             cb_sac.SelectedItem = "Bautizo";
 
-            // Fila 5: Botones (Registrar, Editar, Eliminar, Limpiar)
-            Button btnRegistrar = CrearBotonAccion("Registrar", ColorTranslator.FromHtml("#2563eb"), new Point(25, 210), new Size(200, 42), 10.5f);
-            Button btnEditar = CrearBotonAccion("Editar / Actualizar", ColorTranslator.FromHtml("#10b981"), new Point(245, 210), new Size(200, 42), 10.5f);
-            Button btnEliminar = CrearBotonAccion("Eliminar", ColorTranslator.FromHtml("#ef4444"), new Point(465, 210), new Size(200, 42), 10.5f);
-            Button btnLimpiar = CrearBotonAccion("Limpiar Campos", ColorTranslator.FromHtml("#64748b"), new Point(685, 210), new Size(200, 42), 10.5f);
+            Button btnRegistrar = CrearBotonAccion("Registrar", ColorTranslator.FromHtml("#2563eb"), new Point(25, 210), new Size(205, 42), 10.5f);
+            Button btnEditar = CrearBotonAccion("Editar / Actualizar", ColorTranslator.FromHtml("#10b981"), new Point(250, 210), new Size(205, 42), 10.5f);
+            Button btnEliminar = CrearBotonAccion("Eliminar", ColorTranslator.FromHtml("#ef4444"), new Point(475, 210), new Size(205, 42), 10.5f);
+            Button btnLimpiar = CrearBotonAccion("Limpiar Campos", ColorTranslator.FromHtml("#64748b"), new Point(700, 210), new Size(205, 42), 10.5f);
 
             f_form.Controls.AddRange(new Control[] { btnRegistrar, btnEditar, btnEliminar, btnLimpiar });
             this.content_frame.Controls.Add(f_form);
 
-            // Tabla inferior con las Constancias Antiguas almacenadas en registros_sigep.csv
             DataGridView tablaHist = new DataGridView();
             tablaHist.Location = new Point(40, 370);
-            tablaHist.Size = new Size(920, 320);
+            tablaHist.Size = new Size(940, 320);
             tablaHist.BackgroundColor = Color.White;
             tablaHist.BorderStyle = BorderStyle.FixedSingle;
             tablaHist.AllowUserToAddRows = false;
@@ -3119,26 +2981,24 @@ namespace SIGEP_App
 
             Action refrescarTablaHist = () =>
             {
+                llenandoTablaHist = true;
                 tablaHist.Rows.Clear();
-                for (int i = 0; i < this.db.nombres.Count; i++)
+                for (int i = 0; i < this.db.dnis_prin.Count; i++)
                 {
-                    if (!this.db.checks_mem[i].StartsWith("HIST|"))
+                    if (this.db.origenes[i] != "ANTIGUO")
                     {
                         continue;
                     }
 
-                    string n1, a1, n2, a2;
-                    this.ObtenerNombresHistoricos(i, out n1, out a1, out n2, out a2);
-
                     string dniMostrar = this.db.dnis_prin[i];
-                    string nomMostrar = n1;
-                    string apeMostrar = a1;
+                    string nomMostrar = this.db.nombres[i];
+                    string apeMostrar = this.db.apellidos[i];
 
-                    if (this.db.tipos[i] == "Matrimonio Regular" && this.db.dnis_sec[i] != "---" && this.db.dnis_sec[i] != "")
+                    if (this.db.tipos[i] == "Matrimonio" && this.db.dnis_sec[i] != "---" && this.db.dnis_sec[i] != "")
                     {
                         dniMostrar = this.db.dnis_prin[i] + "\n" + this.db.dnis_sec[i];
-                        nomMostrar = n1 + "\n" + n2;
-                        apeMostrar = a1 + "\n" + a2;
+                        nomMostrar = this.db.nombres[i] + "\n" + this.db.nombres_sec[i];
+                        apeMostrar = this.db.apellidos[i] + "\n" + this.db.apellidos_sec[i];
                     }
 
                     int rowIdx = tablaHist.Rows.Add(
@@ -3153,6 +3013,8 @@ namespace SIGEP_App
                     );
                     tablaHist.Rows[rowIdx].Tag = i;
                 }
+                tablaHist.ClearSelection();
+                llenandoTablaHist = false;
             };
 
             Action limpiarCamposHist = () =>
@@ -3177,26 +3039,23 @@ namespace SIGEP_App
 
             Action<int> cargarRegistroEnFormulario = (idx) =>
             {
-                if (idx < 0 || idx >= this.db.nombres.Count)
+                if (idx < 0 || idx >= this.db.dnis_prin.Count)
                 {
                     return;
                 }
                 cargandoDesdeTabla = true;
                 idx_hist_seleccionado = idx;
 
-                string n1, a1, n2, a2;
-                this.ObtenerNombresHistoricos(idx, out n1, out a1, out n2, out a2);
-
                 cb_sac.SelectedItem = this.db.tipos[idx];
                 txt_dni1.Text = this.db.dnis_prin[idx];
-                txt_nom1.Text = n1;
-                txt_ape1.Text = a1;
+                txt_nom1.Text = this.db.nombres[idx].ToUpper();
+                txt_ape1.Text = this.db.apellidos[idx].ToUpper();
 
-                if (this.db.tipos[idx] == "Matrimonio Regular")
+                if (this.db.tipos[idx] == "Matrimonio")
                 {
                     txt_dni2.Text = (this.db.dnis_sec[idx] != "---") ? this.db.dnis_sec[idx] : "";
-                    txt_nom2.Text = n2;
-                    txt_ape2.Text = a2;
+                    txt_nom2.Text = (this.db.nombres_sec[idx] != "---") ? this.db.nombres_sec[idx].ToUpper() : "";
+                    txt_ape2.Text = (this.db.apellidos_sec[idx] != "---") ? this.db.apellidos_sec[idx].ToUpper() : "";
                 }
                 else
                 {
@@ -3215,10 +3074,22 @@ namespace SIGEP_App
 
             tablaHist.CellClick += (s, e) =>
             {
-                if (e.RowIndex >= 0 && tablaHist.Rows[e.RowIndex].Tag != null)
+                if (!llenandoTablaHist && e.RowIndex >= 0 && tablaHist.Rows[e.RowIndex].Tag != null)
                 {
                     int idxReal = (int)tablaHist.Rows[e.RowIndex].Tag;
                     cargarRegistroEnFormulario(idxReal);
+                }
+            };
+
+            tablaHist.SelectionChanged += (s, e) =>
+            {
+                if (!llenandoTablaHist && tablaHist.SelectedRows.Count > 0 && tablaHist.SelectedRows[0].Tag != null)
+                {
+                    int idxReal = (int)tablaHist.SelectedRows[0].Tag;
+                    if (idxReal != idx_hist_seleccionado)
+                    {
+                        cargarRegistroEnFormulario(idxReal);
+                    }
                 }
             };
 
@@ -3228,11 +3099,11 @@ namespace SIGEP_App
             {
                 string sac = cb_sac.SelectedItem.ToString();
                 string d1 = txt_dni1.Text.Trim();
-                string n1 = Regex.Replace(txt_nom1.Text.Trim(), @"\s+", " ");
-                string a1 = Regex.Replace(txt_ape1.Text.Trim(), @"\s+", " ");
+                string n1 = Regex.Replace(txt_nom1.Text.Trim().ToUpper(), @"\s+", " ");
+                string a1 = Regex.Replace(txt_ape1.Text.Trim().ToUpper(), @"\s+", " ");
                 string d2 = txt_dni2.Text.Trim();
-                string n2 = Regex.Replace(txt_nom2.Text.Trim(), @"\s+", " ");
-                string a2 = Regex.Replace(txt_ape2.Text.Trim(), @"\s+", " ");
+                string n2 = Regex.Replace(txt_nom2.Text.Trim().ToUpper(), @"\s+", " ");
+                string a2 = Regex.Replace(txt_ape2.Text.Trim().ToUpper(), @"\s+", " ");
                 string fec = txt_fec.Text.Trim();
                 string lib = txt_lib.Text.Trim();
                 string fol = txt_fol.Text.Trim();
@@ -3253,7 +3124,7 @@ namespace SIGEP_App
                     errores.Add("- El Apellido es obligatorio (mínimo 2 letras).");
                 }
 
-                if (sac == "Matrimonio Regular")
+                if (sac == "Matrimonio")
                 {
                     if (d2.Length != 8 || d2 == "00000000")
                     {
@@ -3271,7 +3142,7 @@ namespace SIGEP_App
                     {
                         errores.Add("- No puede ingresar 2 DNIs iguales. Los DNIs de los esposos deben ser diferentes.");
                     }
-                    if (n1 != "" && a1 != "" && (n1 + " " + a1).ToLower() == (n2 + " " + a2).ToLower())
+                    if (n1 != "" && a1 != "" && (n1 + " " + a1) == (n2 + " " + a2))
                     {
                         errores.Add("- Los nombres y apellidos de ambos cónyuges no pueden ser idénticos.");
                     }
@@ -3315,12 +3186,12 @@ namespace SIGEP_App
                     }
                     if (this.db.tipos[i] == sac)
                     {
-                        if (this.db.dnis_prin[i] == d1 || (sac == "Matrimonio Regular" && this.db.dnis_sec[i] == d1))
+                        if (this.db.dnis_prin[i] == d1 || (sac == "Matrimonio" && this.db.dnis_sec[i] == d1))
                         {
                             errores.Add("- El DNI " + d1 + " ya se encuentra registrado en " + sac + ".");
                             break;
                         }
-                        if (sac == "Matrimonio Regular" && (this.db.dnis_prin[i] == d2 || this.db.dnis_sec[i] == d2))
+                        if (sac == "Matrimonio" && (this.db.dnis_prin[i] == d2 || this.db.dnis_sec[i] == d2))
                         {
                             errores.Add("- El DNI " + d2 + " ya se encuentra registrado en " + sac + ".");
                             break;
@@ -3351,37 +3222,36 @@ namespace SIGEP_App
 
                 string sac = cb_sac.SelectedItem.ToString();
                 string d1 = txt_dni1.Text.Trim();
-                string n1 = Regex.Replace(txt_nom1.Text.Trim(), @"\s+", " ").Replace("|", "");
-                string a1 = Regex.Replace(txt_ape1.Text.Trim(), @"\s+", " ").Replace("|", "");
-                string nomCompleto1 = (n1 + " " + a1).Trim();
+                string n1 = Regex.Replace(txt_nom1.Text.Trim().ToUpper(), @"\s+", " ");
+                string a1 = Regex.Replace(txt_ape1.Text.Trim().ToUpper(), @"\s+", " ");
 
                 string d2 = "---";
                 string n2 = "---";
                 string a2 = "---";
-                string nomCompleto2 = "---";
 
-                if (sac == "Matrimonio Regular")
+                if (sac == "Matrimonio")
                 {
                     d2 = txt_dni2.Text.Trim();
-                    n2 = Regex.Replace(txt_nom2.Text.Trim(), @"\s+", " ").Replace("|", "");
-                    a2 = Regex.Replace(txt_ape2.Text.Trim(), @"\s+", " ").Replace("|", "");
-                    nomCompleto2 = (n2 + " " + a2).Trim();
+                    n2 = Regex.Replace(txt_nom2.Text.Trim().ToUpper(), @"\s+", " ");
+                    a2 = Regex.Replace(txt_ape2.Text.Trim().ToUpper(), @"\s+", " ");
                 }
 
-                string marcaHistorica = "HIST|" + n1 + "|" + a1 + "|" + n2 + "|" + a2;
-
                 this.db.registrar(
+                    "ANTIGUO",
                     d1,
+                    n1,
+                    a1,
                     d2,
-                    nomCompleto1,
-                    nomCompleto2,
-                    "",
+                    n2,
+                    a2,
                     "N/A",
                     sac,
                     "Finalizado",
+                    "NO",
+                    "---",
+                    "1-1-1",
                     "Constancia histórica registrada.",
                     "",
-                    marcaHistorica,
                     txt_fec.Text.Trim(),
                     txt_lib.Text.Trim(),
                     txt_fol.Text.Trim(),
@@ -3415,38 +3285,36 @@ namespace SIGEP_App
 
                 string sac = cb_sac.SelectedItem.ToString();
                 string d1 = txt_dni1.Text.Trim();
-                string n1 = Regex.Replace(txt_nom1.Text.Trim(), @"\s+", " ").Replace("|", "");
-                string a1 = Regex.Replace(txt_ape1.Text.Trim(), @"\s+", " ").Replace("|", "");
-                string nomCompleto1 = (n1 + " " + a1).Trim();
+                string n1 = Regex.Replace(txt_nom1.Text.Trim().ToUpper(), @"\s+", " ");
+                string a1 = Regex.Replace(txt_ape1.Text.Trim().ToUpper(), @"\s+", " ");
 
                 string d2 = "---";
                 string n2 = "---";
                 string a2 = "---";
-                string nomCompleto2 = "---";
 
-                if (sac == "Matrimonio Regular")
+                if (sac == "Matrimonio")
                 {
                     d2 = txt_dni2.Text.Trim();
-                    n2 = Regex.Replace(txt_nom2.Text.Trim(), @"\s+", " ").Replace("|", "");
-                    a2 = Regex.Replace(txt_ape2.Text.Trim(), @"\s+", " ").Replace("|", "");
-                    nomCompleto2 = (n2 + " " + a2).Trim();
+                    n2 = Regex.Replace(txt_nom2.Text.Trim().ToUpper(), @"\s+", " ");
+                    a2 = Regex.Replace(txt_ape2.Text.Trim().ToUpper(), @"\s+", " ");
                 }
-
-                string marcaHistorica = "HIST|" + n1 + "|" + a1 + "|" + n2 + "|" + a2;
-                this.db.tipos[idx_hist_seleccionado] = sac;
 
                 this.db.actualizar_completo(
                     idx_hist_seleccionado,
                     d1,
+                    n1,
+                    a1,
                     d2,
-                    nomCompleto1,
-                    nomCompleto2,
-                    "",
+                    n2,
+                    a2,
                     "N/A",
+                    sac,
                     "Finalizado",
+                    "NO",
+                    "---",
+                    "1-1-1",
                     "Constancia histórica registrada.",
                     "",
-                    marcaHistorica,
                     txt_fec.Text.Trim(),
                     txt_lib.Text.Trim(),
                     txt_fol.Text.Trim(),
