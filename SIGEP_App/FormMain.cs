@@ -812,9 +812,11 @@ namespace SIGEP_App
             {
                 reqs.Add("1. Copia DNI Comulgante");
                 reqs.Add("2. Partida Bautismo");
+                reqs.Add("3. Copia DNI Padre");
+                reqs.Add("4. Copia DNI Madre");
                 if (tienePadrinos)
                 {
-                    reqs.Add("3. Copia DNI Padrino / Madrina");
+                    reqs.Add("5. Copia DNI Padrino / Madrina");
                 }
             }
             else if (sacramento == "Confirmación")
@@ -865,9 +867,9 @@ namespace SIGEP_App
             }
             else if (sacramento == "Primera Comunión")
             {
-                if (desmarcarDniPadrino && listaChecks.Count > 2)
+                if (desmarcarDniPadrino && listaChecks.Count > 4)
                 {
-                    listaChecks[2].Checked = false;
+                    listaChecks[4].Checked = false;
                 }
             }
             else if (sacramento == "Confirmación")
@@ -1351,7 +1353,7 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(f_conf);
         }
 
-        // ================= 5. REGISTRO DOCUMENTARIO (SIN GÉNERO TITULAR) =================
+        // ================= 5. REGISTRO DOCUMENTARIO =================
         private void mostrar_registro()
         {
             this.limpiar_contenido();
