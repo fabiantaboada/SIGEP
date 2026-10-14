@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -53,6 +54,7 @@ namespace SIGEP_App
     public class BaseDatos
     {
         public string archivo;
+        private static readonly CultureInfo CulturaEs = new CultureInfo("es-PE");
 
         // Arreglos paralelos separados por celdas individuales (21 columnas)
         public List<string> origenes = new List<string>();
@@ -81,6 +83,15 @@ namespace SIGEP_App
         {
             this.archivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "registros_sigep.csv");
             this.cargar_datos();
+        }
+
+        public static string A_MayusculasConTildes(string texto)
+        {
+            if (string.IsNullOrEmpty(texto))
+            {
+                return "";
+            }
+            return texto.Trim().ToUpper(CulturaEs);
         }
 
         public static string LimpiarTextoCelda(string valor)
@@ -236,7 +247,7 @@ namespace SIGEP_App
                 ape = "---";
                 return;
             }
-            string[] partes = completo.Trim().ToUpper().Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] partes = A_MayusculasConTildes(completo).Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (partes.Length >= 3)
             {
                 ape = partes[partes.Length - 2] + " " + partes[partes.Length - 1];
@@ -249,7 +260,7 @@ namespace SIGEP_App
             }
             else
             {
-                nom = completo.Trim().ToUpper();
+                nom = A_MayusculasConTildes(completo);
                 ape = "-";
             }
         }
@@ -271,13 +282,13 @@ namespace SIGEP_App
                     string[] fila = filas[i];
                     if (fila.Length == 21)
                     {
-                        this.origenes.Add(fila[0].Trim().ToUpper());
+                        this.origenes.Add(A_MayusculasConTildes(fila[0]));
                         this.dnis_prin.Add(fila[1].Trim());
-                        this.nombres.Add(fila[2].Trim().ToUpper());
-                        this.apellidos.Add(fila[3].Trim().ToUpper());
+                        this.nombres.Add(A_MayusculasConTildes(fila[2]));
+                        this.apellidos.Add(A_MayusculasConTildes(fila[3]));
                         this.dnis_sec.Add(fila[4].Trim());
-                        this.nombres_sec.Add(fila[5].Trim().ToUpper());
-                        this.apellidos_sec.Add(fila[6].Trim().ToUpper());
+                        this.nombres_sec.Add(A_MayusculasConTildes(fila[5]));
+                        this.apellidos_sec.Add(A_MayusculasConTildes(fila[6]));
                         this.generos.Add(fila[7].Trim());
                         string sac = (fila[8].Trim() == "Matrimonio Regular") ? "Matrimonio" : fila[8].Trim();
                         this.tipos.Add(sac);
@@ -305,10 +316,10 @@ namespace SIGEP_App
                         if (esHist)
                         {
                             string[] pH = fila[10].Split('|');
-                            n1 = pH.Length > 1 ? pH[1].ToUpper() : fila[2].ToUpper();
-                            a1 = pH.Length > 2 ? pH[2].ToUpper() : "";
-                            n2 = pH.Length > 3 ? pH[3].ToUpper() : "---";
-                            a2 = pH.Length > 4 ? pH[4].ToUpper() : "---";
+                            n1 = pH.Length > 1 ? A_MayusculasConTildes(pH[1]) : A_MayusculasConTildes(fila[2]);
+                            a1 = pH.Length > 2 ? A_MayusculasConTildes(pH[2]) : "";
+                            n2 = pH.Length > 3 ? A_MayusculasConTildes(pH[3]) : "---";
+                            a2 = pH.Length > 4 ? A_MayusculasConTildes(pH[4]) : "---";
                         }
                         else
                         {
@@ -356,11 +367,11 @@ namespace SIGEP_App
                 string linea = string.Join(",", new string[] {
                     EscaparCsv(this.origenes[i]),
                     EscaparCsv(this.dnis_prin[i]),
-                    EscaparCsv(this.nombres[i].ToUpper()),
-                    EscaparCsv(this.apellidos[i].ToUpper()),
+                    EscaparCsv(A_MayusculasConTildes(this.nombres[i])),
+                    EscaparCsv(A_MayusculasConTildes(this.apellidos[i])),
                     EscaparCsv(this.dnis_sec[i]),
-                    EscaparCsv(this.nombres_sec[i].ToUpper()),
-                    EscaparCsv(this.apellidos_sec[i].ToUpper()),
+                    EscaparCsv(A_MayusculasConTildes(this.nombres_sec[i])),
+                    EscaparCsv(A_MayusculasConTildes(this.apellidos_sec[i])),
                     EscaparCsv(this.generos[i]),
                     EscaparCsv(this.tipos[i]),
                     EscaparCsv(this.estados[i]),
@@ -383,13 +394,13 @@ namespace SIGEP_App
 
         public void registrar(string origen, string d1, string nom1, string ape1, string d2, string nom2, string ape2, string gen, string tipo, string est, string t_pad, string est_pad, string chks, string o_auto, string o_adic, string fec, string lib, string fol, string asi, string pag, string deu)
         {
-            this.origenes.Add(origen.ToUpper());
+            this.origenes.Add(A_MayusculasConTildes(origen));
             this.dnis_prin.Add(d1);
-            this.nombres.Add(nom1.ToUpper());
-            this.apellidos.Add(ape1.ToUpper());
+            this.nombres.Add(A_MayusculasConTildes(nom1));
+            this.apellidos.Add(A_MayusculasConTildes(ape1));
             this.dnis_sec.Add(d2);
-            this.nombres_sec.Add(nom2.ToUpper());
-            this.apellidos_sec.Add(ape2.ToUpper());
+            this.nombres_sec.Add(A_MayusculasConTildes(nom2));
+            this.apellidos_sec.Add(A_MayusculasConTildes(ape2));
             this.generos.Add(gen);
             this.tipos.Add(tipo);
             this.estados.Add(est);
@@ -412,11 +423,11 @@ namespace SIGEP_App
         public void actualizar_completo(int idx, string d1, string nom1, string ape1, string d2, string nom2, string ape2, string gen, string tipo, string est, string t_pad, string est_pad, string chks, string o_auto, string o_adic, string fec, string lib, string fol, string asi, string pag, string deu)
         {
             this.dnis_prin[idx] = d1;
-            this.nombres[idx] = nom1.ToUpper();
-            this.apellidos[idx] = ape1.ToUpper();
+            this.nombres[idx] = A_MayusculasConTildes(nom1);
+            this.apellidos[idx] = A_MayusculasConTildes(ape1);
             this.dnis_sec[idx] = d2;
-            this.nombres_sec[idx] = nom2.ToUpper();
-            this.apellidos_sec[idx] = ape2.ToUpper();
+            this.nombres_sec[idx] = A_MayusculasConTildes(nom2);
+            this.apellidos_sec[idx] = A_MayusculasConTildes(ape2);
             this.generos[idx] = gen;
             this.tipos[idx] = tipo;
             this.estados[idx] = est;
@@ -468,8 +479,8 @@ namespace SIGEP_App
             {
                 return "";
             }
-            string s = texto.ToUpper();
-            s = s.Replace('Á', 'A').Replace('É', 'E').Replace('Í', 'I').Replace('Ó', 'O').Replace('Ú', 'U');
+            string s = A_MayusculasConTildes(texto);
+            s = s.Replace('Á', 'A').Replace('É', 'E').Replace('Í', 'I').Replace('Ó', 'O').Replace('Ú', 'U').Replace('Ü', 'U');
             return s;
         }
 
@@ -483,11 +494,11 @@ namespace SIGEP_App
                 {
                     continue;
                 }
-                if (this.dnis_prin[i] == dni)
+                if (this.dnis_prin[i] == dni && dni != "SIN DNI" && dni != "---")
                 {
                     resultados.Add(i);
                 }
-                else if (this.dnis_sec[i] == dni && dni != "" && dni != "---")
+                else if (this.dnis_sec[i] == dni && dni != "" && dni != "---" && dni != "SIN DNI")
                 {
                     resultados.Add(i);
                 }
@@ -568,8 +579,8 @@ namespace SIGEP_App
             {
                 for (int j = 0; j < length - i - 1; j++)
                 {
-                    string clave1 = (this.apellidos[j] + " " + this.nombres[j]).ToUpper();
-                    string clave2 = (this.apellidos[j + 1] + " " + this.nombres[j + 1]).ToUpper();
+                    string clave1 = A_MayusculasConTildes(this.apellidos[j] + " " + this.nombres[j]);
+                    string clave2 = A_MayusculasConTildes(this.apellidos[j + 1] + " " + this.nombres[j + 1]);
                     if (string.Compare(clave1, clave2, StringComparison.Ordinal) > 0)
                     {
                         this._swap(j, j + 1);
@@ -587,8 +598,8 @@ namespace SIGEP_App
                 int min_pos = i;
                 for (int j = i + 1; j < length; j++)
                 {
-                    string claveJ = (this.apellidos[j] + " " + this.nombres[j]).ToUpper();
-                    string claveMin = (this.apellidos[min_pos] + " " + this.nombres[min_pos]).ToUpper();
+                    string claveJ = A_MayusculasConTildes(this.apellidos[j] + " " + this.nombres[j]);
+                    string claveMin = A_MayusculasConTildes(this.apellidos[min_pos] + " " + this.nombres[min_pos]);
                     if (string.Compare(claveJ, claveMin, StringComparison.Ordinal) > 0)
                     {
                         min_pos = j;
@@ -612,6 +623,22 @@ namespace SIGEP_App
         {
             cacheNombres.Clear();
             cacheApellidos.Clear();
+        }
+
+        private static string DecodificarTextoJson(string raw)
+        {
+            if (string.IsNullOrEmpty(raw))
+            {
+                return "";
+            }
+            try
+            {
+                return BaseDatos.A_MayusculasConTildes(Regex.Unescape(raw));
+            }
+            catch
+            {
+                return BaseDatos.A_MayusculasConTildes(raw);
+            }
         }
 
         public static bool consultar_dni_separado(string dni, out string nombres, out string apellidos)
@@ -657,10 +684,10 @@ namespace SIGEP_App
 
                                 if (mNom.Success && !string.IsNullOrWhiteSpace(mNom.Groups[1].Value))
                                 {
-                                    nombres = mNom.Groups[1].Value.Trim().ToUpper();
-                                    string pat = mPat.Success ? mPat.Groups[1].Value.Trim().ToUpper() : "";
-                                    string mat = mMat.Success ? mMat.Groups[1].Value.Trim().ToUpper() : "";
-                                    apellidos = (pat + " " + mat).Trim().ToUpper();
+                                    nombres = DecodificarTextoJson(mNom.Groups[1].Value);
+                                    string pat = mPat.Success ? DecodificarTextoJson(mPat.Groups[1].Value) : "";
+                                    string mat = mMat.Success ? DecodificarTextoJson(mMat.Groups[1].Value) : "";
+                                    apellidos = BaseDatos.A_MayusculasConTildes(pat + " " + mat);
 
                                     cacheNombres[dni] = nombres;
                                     cacheApellidos[dni] = apellidos;
