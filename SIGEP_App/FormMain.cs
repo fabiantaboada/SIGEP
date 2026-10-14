@@ -66,8 +66,13 @@ namespace SIGEP_App
             this.ruta_assets = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
             if (!Directory.Exists(this.ruta_assets))
             {
-                this.ruta_assets = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\assets"));
+                string rutaAlternativa = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\assets"));
+                if (Directory.Exists(rutaAlternativa))
+                {
+                    this.ruta_assets = rutaAlternativa;
+                }
             }
+
             this.db = new BaseDatos();
             this.logica = new ControladorLogica();
             this.config = new Configuracion();
@@ -100,6 +105,27 @@ namespace SIGEP_App
             btn.TextAlign = ContentAlignment.MiddleCenter;
             btn.Cursor = Cursors.Hand;
             return btn;
+        }
+
+        private string ObtenerEtiquetaDniPorSacramento(string sacramento)
+        {
+            if (sacramento == "Bautizo")
+            {
+                return "DNI Bautizado:";
+            }
+            else if (sacramento == "Primera Comunión")
+            {
+                return "DNI Comulgante:";
+            }
+            else if (sacramento == "Confirmación")
+            {
+                return "DNI Confirmando:";
+            }
+            else if (sacramento == "Matrimonio")
+            {
+                return "DNI Novio:";
+            }
+            return "DNI Titular:";
         }
 
         // ================= MENÚ DESPLEGABLE SUPERIOR =================
@@ -412,7 +438,6 @@ namespace SIGEP_App
             }
             else if (tipo == "texto")
             {
-                // Admite letras en español con tildes (Á, É, Í, Ó, Ú, Ñ, Ü), espacios, puntos y guiones
                 entry_widget.MaxLength = 70;
                 entry_widget.CharacterCasing = CharacterCasing.Upper;
                 entry_widget.KeyPress += (s, e) =>
@@ -825,12 +850,10 @@ namespace SIGEP_App
             return reqs.ToArray();
         }
 
-        // Desmarca únicamente las casillas referentes al padrino/madrina
         private void DesmarcarSoloRequisitosPadrino(string sacramento, List<CheckBox> listaChecks, bool desmarcarDniPadrino, bool desmarcarCertificadoEstadoCivil)
         {
             if (sacramento == "Bautizo")
             {
-                // Índices 0..3 son del Bautizado y Padres. Índice 4 es DNI Padrino, Índice 5 es Constancia/Partida según Estado Civil
                 if (desmarcarDniPadrino && listaChecks.Count > 4)
                 {
                     listaChecks[4].Checked = false;
@@ -842,7 +865,6 @@ namespace SIGEP_App
             }
             else if (sacramento == "Primera Comunión")
             {
-                // Índices 0..1 son del Comulgante. Índice 2 es DNI Padrino
                 if (desmarcarDniPadrino && listaChecks.Count > 2)
                 {
                     listaChecks[2].Checked = false;
@@ -850,7 +872,6 @@ namespace SIGEP_App
             }
             else if (sacramento == "Confirmación")
             {
-                // Índices 0..2 son del Confirmando. Índice 3 es DNI Padrino, Índice 4 es Constancia/Partida según Estado Civil
                 if (desmarcarDniPadrino && listaChecks.Count > 3)
                 {
                     listaChecks[3].Checked = false;
@@ -1330,7 +1351,7 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(f_conf);
         }
 
-        // ================= 5. REGISTRO DOCUMENTARIO =================
+        // ================= 5. REGISTRO DOCUMENTARIO (SIN GÉNERO TITULAR) =================
         private void mostrar_registro()
         {
             this.limpiar_contenido();
@@ -1350,42 +1371,37 @@ namespace SIGEP_App
             f_main.BorderStyle = BorderStyle.FixedSingle;
 
             Label lblTram = new Label() { Text = "Trámite:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 20), AutoSize = true };
-            ComboBox cb_tipo = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(150, 17), Width = 200 };
+            ComboBox cb_tipo = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(165, 17), Width = 220 };
             cb_tipo.Items.AddRange(new string[] { "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
 
-            Label lblGen = new Label() { Text = "Género Titular:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(390, 20), AutoSize = true };
-            ComboBox cb_gen = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(510, 17), Width = 150 };
-            cb_gen.Items.AddRange(new string[] { "Femenino", "Masculino" });
-            cb_gen.SelectedIndex = 0;
+            f_main.Controls.AddRange(new Control[] { lblTram, cb_tipo });
 
-            f_main.Controls.AddRange(new Control[] { lblTram, cb_tipo, lblGen, cb_gen });
-
-            Label lbl_d1 = new Label() { Text = "DNI Bautizado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 62), Size = new Size(118, 25) };
-            TextBox txt_d1 = new TextBox() { Location = new Point(150, 59), Width = 110 };
+            Label lbl_d1 = new Label() { Text = "DNI Bautizado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 62), Size = new Size(132, 25) };
+            TextBox txt_d1 = new TextBox() { Location = new Point(165, 59), Width = 110 };
             this.adjuntar_validacion(txt_d1, "dni");
 
-            Label lbl_nom1 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(275, 62), AutoSize = true };
-            TextBox txt_nom1 = new TextBox() { Location = new Point(355, 59), Width = 220 };
+            Label lbl_nom1 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(290, 62), AutoSize = true };
+            TextBox txt_nom1 = new TextBox() { Location = new Point(365, 59), Width = 215 };
             AsignarPlaceholder(txt_nom1, "NOMBRES");
             this.adjuntar_validacion(txt_nom1, "texto");
 
-            Label lbl_ape1 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(590, 62), AutoSize = true };
+            Label lbl_ape1 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(595, 62), AutoSize = true };
             TextBox txt_ape1 = new TextBox() { Location = new Point(670, 59), Width = 235 };
             AsignarPlaceholder(txt_ape1, "APELLIDOS");
             this.adjuntar_validacion(txt_ape1, "texto");
 
             f_main.Controls.AddRange(new Control[] { lbl_d1, txt_d1, lbl_nom1, txt_nom1, lbl_ape1, txt_ape1 });
 
-            Label lbl_d2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 102), Size = new Size(118, 25), Visible = false };
-            TextBox txt_d2 = new TextBox() { Location = new Point(150, 99), Width = 110, Visible = false };
+            Label lbl_d2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 102), Size = new Size(132, 25), Visible = false };
+            TextBox txt_d2 = new TextBox() { Location = new Point(165, 99), Width = 110, Visible = false };
             this.adjuntar_validacion(txt_d2, "dni");
 
-            Label lbl_nom2 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(275, 102), AutoSize = true, Visible = false };
-            TextBox txt_nom2 = new TextBox() { Location = new Point(355, 99), Width = 220, Visible = false };
+            Label lbl_nom2 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(290, 102), AutoSize = true, Visible = false };
+            TextBox txt_nom2 = new TextBox() { Location = new Point(365, 99), Width = 215, Visible = false };
             AsignarPlaceholder(txt_nom2, "NOMBRES NOVIA");
             this.adjuntar_validacion(txt_nom2, "texto");
 
-            Label lbl_ape2 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(590, 102), AutoSize = true, Visible = false };
+            Label lbl_ape2 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(595, 102), AutoSize = true, Visible = false };
             TextBox txt_ape2 = new TextBox() { Location = new Point(670, 99), Width = 235, Visible = false };
             AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
             this.adjuntar_validacion(txt_ape2, "texto");
@@ -1493,11 +1509,10 @@ namespace SIGEP_App
                 bool tienePad = chk_padrinos.Checked;
                 string estPad = cb_est_pad.SelectedItem != null ? cb_est_pad.SelectedItem.ToString() : "Soltero(a)";
 
+                lbl_d1.Text = this.ObtenerEtiquetaDniPorSacramento(eleccion);
+
                 if (eleccion == "Bautizo")
                 {
-                    lblGen.Visible = true;
-                    cb_gen.Visible = true;
-                    lbl_d1.Text = "DNI Bautizado:";
                     lbl_d2.Visible = false;
                     txt_d2.Visible = false;
                     lbl_nom2.Visible = false;
@@ -1510,9 +1525,6 @@ namespace SIGEP_App
                 }
                 else if (eleccion == "Primera Comunión")
                 {
-                    lblGen.Visible = true;
-                    cb_gen.Visible = true;
-                    lbl_d1.Text = "DNI Comulgante:";
                     lbl_d2.Visible = false;
                     txt_d2.Visible = false;
                     lbl_nom2.Visible = false;
@@ -1525,9 +1537,6 @@ namespace SIGEP_App
                 }
                 else if (eleccion == "Confirmación")
                 {
-                    lblGen.Visible = true;
-                    cb_gen.Visible = true;
-                    lbl_d1.Text = "DNI Confirmando:";
                     lbl_d2.Visible = false;
                     txt_d2.Visible = false;
                     lbl_nom2.Visible = false;
@@ -1540,9 +1549,6 @@ namespace SIGEP_App
                 }
                 else if (eleccion == "Matrimonio")
                 {
-                    lblGen.Visible = false;
-                    cb_gen.Visible = false;
-                    lbl_d1.Text = "DNI Novio:";
                     lbl_d2.Visible = true;
                     txt_d2.Visible = true;
                     lbl_nom2.Visible = true;
@@ -1595,7 +1601,6 @@ namespace SIGEP_App
             {
                 if (cb_tipo.SelectedItem != null)
                 {
-                    // Al cambiar entre Casado(a) y Soltero(a), elimina la marca del requisito referente al estado civil del padrino/madrina
                     this.DesmarcarSoloRequisitosPadrino(cb_tipo.SelectedItem.ToString(), this.chks, false, true);
                 }
                 recargar_requisitos_dinamicos();
@@ -1653,7 +1658,7 @@ namespace SIGEP_App
                 List<string> errores = new List<string>();
                 if (dni1_val.Length != 8 || dni1_val == "00000000")
                 {
-                    errores.Add("- El DNI del titular debe tener 8 dígitos numéricos válidos.");
+                    errores.Add("- El " + this.ObtenerEtiquetaDniPorSacramento(tipo_sel).Replace(":", "") + " debe tener 8 dígitos numéricos válidos.");
                 }
                 if (!this.EsNombreValido(nom1_val))
                 {
@@ -1672,7 +1677,7 @@ namespace SIGEP_App
 
                     if (dni2_val.Length != 8 || dni2_val == "00000000")
                     {
-                        errores.Add("- El DNI de la Novia debe tener 8 dígitos numéricos válidos.");
+                        errores.Add("- El DNI Novia debe tener 8 dígitos numéricos válidos.");
                     }
                     if (!this.EsNombreValido(nom2_val))
                     {
@@ -1756,7 +1761,6 @@ namespace SIGEP_App
                 }
 
                 string est = (completos && pago == "Pagado") ? "Inscrito(a)" : "Observado";
-                string gen_final = (tipo_sel == "Matrimonio") ? "N/A" : cb_gen.SelectedItem.ToString();
                 string t_pad_str = (tipo_sel == "Matrimonio") ? "SI" : (chk_padrinos.Checked ? "SI" : "NO");
                 string est_pad_str = ((tipo_sel == "Bautizo" || tipo_sel == "Confirmación") && chk_padrinos.Checked) ? cb_est_pad.SelectedItem.ToString() : "---";
 
@@ -1781,7 +1785,7 @@ namespace SIGEP_App
                     dni2_val,
                     nom2_val,
                     ape2_val,
-                    gen_final,
+                    "N/A",
                     tipo_sel,
                     est,
                     t_pad_str,
@@ -1805,7 +1809,7 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(f_main);
         }
 
-        // ================= 6. BUSCAR Y EDITAR (POR DNI O APELLIDOS, SIN BOTÓN VER TODOS) =================
+        // ================= 6. BUSCAR Y EDITAR (POR DNI O APELLIDOS) =================
         private void mostrar_buscar()
         {
             this.limpiar_contenido();
@@ -1886,12 +1890,12 @@ namespace SIGEP_App
             bool cargandoEdicion = false;
             bool llenandoTabla = false;
 
-            Label lbl_e_dni1 = new Label() { Text = "DNI Titular:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 18), Size = new Size(115, 25) };
-            TextBox t_dni1 = new TextBox() { Location = new Point(140, 15), Width = 110 };
+            Label lbl_e_dni1 = new Label() { Text = "DNI Bautizado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 18), Size = new Size(132, 25) };
+            TextBox t_dni1 = new TextBox() { Location = new Point(155, 15), Width = 110 };
             this.adjuntar_validacion(t_dni1, "dni");
 
-            Label lbl_e_nom1 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(265, 18), AutoSize = true };
-            TextBox t_nom1 = new TextBox() { Location = new Point(345, 15), Width = 225 };
+            Label lbl_e_nom1 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(280, 18), AutoSize = true };
+            TextBox t_nom1 = new TextBox() { Location = new Point(355, 15), Width = 215 };
             this.adjuntar_validacion(t_nom1, "texto");
 
             Label lbl_e_ape1 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 18), AutoSize = true };
@@ -1900,12 +1904,12 @@ namespace SIGEP_App
 
             f_edit.Controls.AddRange(new Control[] { lbl_e_dni1, t_dni1, lbl_e_nom1, t_nom1, lbl_e_ape1, t_ape1 });
 
-            Label lbl_e_dni2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 56), Size = new Size(115, 25), Visible = false };
-            TextBox t_dni2 = new TextBox() { Location = new Point(140, 53), Width = 110, Visible = false };
+            Label lbl_e_dni2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 56), Size = new Size(132, 25), Visible = false };
+            TextBox t_dni2 = new TextBox() { Location = new Point(155, 53), Width = 110, Visible = false };
             this.adjuntar_validacion(t_dni2, "dni");
 
-            Label lbl_e_nom2 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(265, 56), AutoSize = true, Visible = false };
-            TextBox t_nom2 = new TextBox() { Location = new Point(345, 53), Width = 225, Visible = false };
+            Label lbl_e_nom2 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(280, 56), AutoSize = true, Visible = false };
+            TextBox t_nom2 = new TextBox() { Location = new Point(355, 53), Width = 215, Visible = false };
             this.adjuntar_validacion(t_nom2, "texto");
 
             Label lbl_e_ape2 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 56), AutoSize = true, Visible = false };
@@ -2099,7 +2103,6 @@ namespace SIGEP_App
             {
                 if (!cargandoEdicion && idx_actual >= 0 && idx_actual < this.db.tipos.Count)
                 {
-                    // Desmarca solo lo referente al certificado de estado civil del padrino/madrina
                     this.DesmarcarSoloRequisitosPadrino(this.db.tipos[idx_actual], this.chks_edit, false, true);
                     reconstruir_requisitos_edicion();
                 }
@@ -2147,22 +2150,7 @@ namespace SIGEP_App
                 string tipo = this.db.tipos[idx];
                 bool esMatrimonio = (tipo == "Matrimonio");
 
-                if (tipo == "Bautizo")
-                {
-                    lbl_e_dni1.Text = "DNI Bautizado:";
-                }
-                else if (tipo == "Primera Comunión")
-                {
-                    lbl_e_dni1.Text = "DNI Comulgante:";
-                }
-                else if (tipo == "Confirmación")
-                {
-                    lbl_e_dni1.Text = "DNI Confirmando:";
-                }
-                else
-                {
-                    lbl_e_dni1.Text = "DNI Novio:";
-                }
+                lbl_e_dni1.Text = this.ObtenerEtiquetaDniPorSacramento(tipo);
 
                 lbl_e_dni2.Visible = esMatrimonio;
                 t_dni2.Visible = esMatrimonio;
@@ -2430,7 +2418,7 @@ namespace SIGEP_App
 
                 if (dni1_val.Length != 8 || dni1_val == "00000000")
                 {
-                    MessageBox.Show("El DNI principal debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("El " + this.ObtenerEtiquetaDniPorSacramento(tipo_actual).Replace(":", "") + " debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 if (!this.EsNombreValido(nom1_val))
@@ -2452,7 +2440,7 @@ namespace SIGEP_App
 
                     if (dni2_val.Length != 8 || dni2_val == "00000000")
                     {
-                        MessageBox.Show("El DNI de la Novia debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("El DNI Novia debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                     if (!this.EsNombreValido(nom2_val) || !this.EsNombreValido(ape2_val))
@@ -2612,7 +2600,7 @@ namespace SIGEP_App
                     dni2_val,
                     nom2_val,
                     ape2_val,
-                    this.db.generos[i],
+                    "N/A",
                     tipo_actual,
                     estado_elegido,
                     t_pad_str,
@@ -2886,7 +2874,7 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(btnExportar);
         }
 
-        // ================= 8. OPCIONES AVANZADAS: CONSTANCIAS ANTIGUAS (CON DNI O SIN DNI) =================
+        // ================= 8. OPCIONES AVANZADAS: CONSTANCIAS ANTIGUAS =================
         private void mostrar_opciones_avanzadas()
         {
             this.limpiar_contenido();
@@ -2917,45 +2905,42 @@ namespace SIGEP_App
             bool cargandoDesdeTabla = false;
             bool llenandoTablaHist = false;
 
-            // Fila 1: Sacramento y Selector Con DNI / Sin DNI
             Label lblSac = new Label() { Text = "Sacramento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 20), AutoSize = true };
-            ComboBox cb_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(125, 17), Width = 190 };
+            ComboBox cb_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(160, 17), Width = 190 };
             cb_sac.Items.AddRange(new string[] { "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
 
-            Label lblModoDni = new Label() { Text = "Tipo Registro:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(350, 20), AutoSize = true };
-            ComboBox cb_modo_dni = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(460, 17), Width = 150 };
+            Label lblModoDni = new Label() { Text = "Tipo Registro:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(385, 20), AutoSize = true };
+            ComboBox cb_modo_dni = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(495, 17), Width = 150 };
             cb_modo_dni.Items.AddRange(new string[] { "Con DNI", "Sin DNI" });
 
             f_form.Controls.AddRange(new Control[] { lblSac, cb_sac, lblModoDni, cb_modo_dni });
 
-            // Fila 2: Titular / Novio
-            Label lblDni1 = new Label() { Text = "DNI:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 65), Size = new Size(95, 25) };
-            TextBox txt_dni1 = new TextBox() { Location = new Point(125, 62), Width = 120 };
+            Label lblDni1 = new Label() { Text = "DNI Bautizado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 65), Size = new Size(132, 25) };
+            TextBox txt_dni1 = new TextBox() { Location = new Point(160, 62), Width = 110 };
             this.adjuntar_validacion(txt_dni1, "dni");
 
-            Label lblNom1 = new Label() { Text = "Nombre:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(265, 65), Size = new Size(75, 25) };
-            TextBox txt_nom1 = new TextBox() { Location = new Point(345, 62), Width = 220 };
+            Label lblNom1 = new Label() { Text = "Nombre:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(285, 65), Size = new Size(70, 25) };
+            TextBox txt_nom1 = new TextBox() { Location = new Point(360, 62), Width = 215 };
             AsignarPlaceholder(txt_nom1, "NOMBRES");
             this.adjuntar_validacion(txt_nom1, "texto");
 
-            Label lblApe1 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 65), Size = new Size(75, 25) };
+            Label lblApe1 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(590, 65), Size = new Size(70, 25) };
             TextBox txt_ape1 = new TextBox() { Location = new Point(665, 62), Width = 240 };
             AsignarPlaceholder(txt_ape1, "APELLIDOS");
             this.adjuntar_validacion(txt_ape1, "texto");
 
             f_form.Controls.AddRange(new Control[] { lblDni1, txt_dni1, lblNom1, txt_nom1, lblApe1, txt_ape1 });
 
-            // Fila 3: Novia (Cuando es Matrimonio)
-            Label lblDni2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 108), Size = new Size(95, 25), Visible = false };
-            TextBox txt_dni2 = new TextBox() { Location = new Point(125, 105), Width = 120, Visible = false };
+            Label lblDni2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 108), Size = new Size(132, 25), Visible = false };
+            TextBox txt_dni2 = new TextBox() { Location = new Point(160, 105), Width = 110, Visible = false };
             this.adjuntar_validacion(txt_dni2, "dni");
 
-            Label lblNom2 = new Label() { Text = "Nombre:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(265, 108), Size = new Size(75, 25), Visible = false };
-            TextBox txt_nom2 = new TextBox() { Location = new Point(345, 105), Width = 220, Visible = false };
+            Label lblNom2 = new Label() { Text = "Nombre:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(285, 108), Size = new Size(70, 25), Visible = false };
+            TextBox txt_nom2 = new TextBox() { Location = new Point(360, 105), Width = 215, Visible = false };
             AsignarPlaceholder(txt_nom2, "NOMBRES NOVIA");
             this.adjuntar_validacion(txt_nom2, "texto");
 
-            Label lblApe2 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 108), Size = new Size(75, 25), Visible = false };
+            Label lblApe2 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(590, 108), Size = new Size(70, 25), Visible = false };
             TextBox txt_ape2 = new TextBox() { Location = new Point(665, 105), Width = 240, Visible = false };
             AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
             this.adjuntar_validacion(txt_ape2, "texto");
@@ -2965,24 +2950,23 @@ namespace SIGEP_App
             this.VincularAutocompletadoReniecSeparado(txt_dni1, txt_nom1, txt_ape1, txt_dni2, () => cargandoDesdeTabla);
             this.VincularAutocompletadoReniecSeparado(txt_dni2, txt_nom2, txt_ape2, txt_dni1, () => cargandoDesdeTabla);
 
-            // Fila 4: Fecha, Libro, Folio, Asiento
             Label lblFec = new Label() { Text = "Fecha:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 155), Size = new Size(95, 25) };
-            TextBox txt_fec = new TextBox() { Location = new Point(125, 152), Width = 130 };
+            TextBox txt_fec = new TextBox() { Location = new Point(160, 152), Width = 130 };
             AsignarPlaceholder(txt_fec, "DD/MM/AAAA");
             this.adjuntar_validacion(txt_fec, "fecha");
 
-            Label lblLib = new Label() { Text = "Libro:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(295, 155), AutoSize = true };
-            TextBox txt_lib = new TextBox() { Location = new Point(350, 152), Width = 90 };
+            Label lblLib = new Label() { Text = "Libro:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(315, 155), AutoSize = true };
+            TextBox txt_lib = new TextBox() { Location = new Point(370, 152), Width = 90 };
             AsignarPlaceholder(txt_lib, "---");
             this.adjuntar_validacion(txt_lib, "registro_libro");
 
-            Label lblFol = new Label() { Text = "Folio:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(475, 155), AutoSize = true };
-            TextBox txt_fol = new TextBox() { Location = new Point(530, 152), Width = 90 };
+            Label lblFol = new Label() { Text = "Folio:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(490, 155), AutoSize = true };
+            TextBox txt_fol = new TextBox() { Location = new Point(545, 152), Width = 90 };
             AsignarPlaceholder(txt_fol, "---");
             this.adjuntar_validacion(txt_fol, "registro_libro");
 
-            Label lblAsi = new Label() { Text = "Asiento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(655, 155), AutoSize = true };
-            TextBox txt_asi = new TextBox() { Location = new Point(725, 152), Width = 90 };
+            Label lblAsi = new Label() { Text = "Asiento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(665, 155), AutoSize = true };
+            TextBox txt_asi = new TextBox() { Location = new Point(735, 152), Width = 90 };
             AsignarPlaceholder(txt_asi, "---");
             this.adjuntar_validacion(txt_asi, "registro_libro");
 
@@ -2990,10 +2974,11 @@ namespace SIGEP_App
 
             Action actualizarVistaDniSac = () =>
             {
-                bool esMatrimonio = (cb_sac.SelectedItem != null && cb_sac.SelectedItem.ToString() == "Matrimonio");
+                string sacSel = cb_sac.SelectedItem != null ? cb_sac.SelectedItem.ToString() : "Bautizo";
+                bool esMatrimonio = (sacSel == "Matrimonio");
                 bool conDni = (cb_modo_dni.SelectedItem == null || cb_modo_dni.SelectedItem.ToString() == "Con DNI");
 
-                lblDni1.Text = esMatrimonio ? "DNI Novio:" : "DNI:";
+                lblDni1.Text = this.ObtenerEtiquetaDniPorSacramento(sacSel);
                 lblDni1.Visible = conDni;
                 txt_dni1.Visible = conDni;
                 txt_dni1.Enabled = conDni;
@@ -3208,7 +3193,7 @@ namespace SIGEP_App
                 {
                     if (d1.Length != 8 || d1 == "00000000")
                     {
-                        errores.Add("- El DNI debe tener exactamente 8 dígitos numéricos válidos.");
+                        errores.Add("- El " + this.ObtenerEtiquetaDniPorSacramento(sac).Replace(":", "") + " debe tener exactamente 8 dígitos numéricos válidos.");
                     }
                 }
                 if (!this.EsNombreValido(n1))
@@ -3226,7 +3211,7 @@ namespace SIGEP_App
                     {
                         if (d2.Length != 8 || d2 == "00000000")
                         {
-                            errores.Add("- El DNI de la Novia debe tener 8 dígitos numéricos válidos.");
+                            errores.Add("- El DNI Novia debe tener 8 dígitos numéricos válidos.");
                         }
                         if (d1 != "" && d1 == d2)
                         {
