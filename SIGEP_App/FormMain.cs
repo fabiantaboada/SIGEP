@@ -64,6 +64,10 @@ namespace SIGEP_App
             this.Font = new Font("Segoe UI", 10f, FontStyle.Regular);
 
             this.ruta_assets = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
+            if (!Directory.Exists(this.ruta_assets))
+            {
+                this.ruta_assets = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\assets"));
+            }
             this.db = new BaseDatos();
             this.logica = new ControladorLogica();
             this.config = new Configuracion();
