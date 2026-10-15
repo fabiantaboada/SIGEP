@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
@@ -36,7 +35,7 @@ namespace SIGEP_App
             return false;
         }
 
-        public bool generar_reporte_general_pdf(string ruta, List<ItemReporte> filtrados)
+        public bool generar_reporte_general_pdf(string ruta, ItemReporte[] filtrados, int totalFiltrados)
         {
             try
             {
@@ -71,7 +70,7 @@ namespace SIGEP_App
                     tabla.AddCell(c);
                 }
 
-                for (int i = 0; i < filtrados.Count; i++)
+                for (int i = 0; i < totalFiltrados; i++)
                 {
                     ItemReporte f = filtrados[i];
                     tabla.AddCell(new PdfPCell(new Phrase(f.nom, fCelda)) { Padding = 5f });

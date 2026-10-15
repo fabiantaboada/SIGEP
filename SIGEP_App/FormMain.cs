@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -33,14 +32,20 @@ namespace SIGEP_App
         private Panel sidebar;
         private Panel content_frame;
 
-        private List<CheckBox> chks = new List<CheckBox>();
+        // Arreglos puros de controles CheckBox
+        private CheckBox[] chks = new CheckBox[9];
         private int reqs_activos = 0;
 
-        private List<CheckBox> chks_edit = new List<CheckBox>();
+        private CheckBox[] chks_edit = new CheckBox[9];
         private int reqs_activos_edit = 0;
 
-        private Dictionary<Control, Color> coloresBorde = new Dictionary<Control, Color>();
-        private HashSet<Control> panelesConPaint = new HashSet<Control>();
+        // Arreglos paralelos para pintar bordes de validación
+        private Control[] controlesBorde = new Control[300];
+        private Color[] coloresBorde = new Color[300];
+        private int totalControlesBorde = 0;
+
+        private Control[] panelesConPaint = new Control[60];
+        private int totalPanelesPaint = 0;
 
         public FormMain()
         {
@@ -113,6 +118,20 @@ namespace SIGEP_App
                 return "DNI Novio:";
             }
             return "DNI Titular:";
+        }
+
+        private string UnirArregloConSeparador(string[] arreglo, int cantidad, string separador)
+        {
+            if (cantidad <= 0)
+            {
+                return "";
+            }
+            string resultado = arreglo[0];
+            for (int i = 1; i < cantidad; i++)
+            {
+                resultado = resultado + separador + arreglo[i];
+            }
+            return resultado;
         }
 
         // ================= MENÚ DESPLEGABLE SUPERIOR =================
@@ -347,22 +366,62 @@ namespace SIGEP_App
         private void limpiar_contenedor()
         {
             this.container.Controls.Clear();
+            this.totalControlesBorde = 0;
+            this.totalPanelesPaint = 0;
         }
 
         private void limpiar_contenido()
         {
             this.content_frame.Controls.Clear();
+            this.totalControlesBorde = 0;
+            this.totalPanelesPaint = 0;
         }
 
-        // ================= MOTOR DE BORDES DE COLORES Y VALIDACIÓN =================
+        // ================= MOTOR DE BORDES CON ARREGLOS PARALELOS =================
+        private int BuscarIndiceControlBorde(Control ctrl)
+        {
+            for (int i = 0; i < this.totalControlesBorde; i++)
+            {
+                if (this.controlesBorde[i] == ctrl)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private bool ExistePanelConPaint(Control pnl)
+        {
+            for (int i = 0; i < this.totalPanelesPaint; i++)
+            {
+                if (this.panelesConPaint[i] == pnl)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private void ActualizarBorde(Control ctrl, Color color)
         {
-            this.coloresBorde[ctrl] = color;
+            int pos = this.BuscarIndiceControlBorde(ctrl);
+            if (pos != -1)
+            {
+                this.coloresBorde[pos] = color;
+            }
+            else if (this.totalControlesBorde < this.controlesBorde.Length)
+            {
+                this.controlesBorde[this.totalControlesBorde] = ctrl;
+                this.coloresBorde[this.totalControlesBorde] = color;
+                this.totalControlesBorde++;
+            }
+
             if (ctrl.Parent != null)
             {
-                if (!this.panelesConPaint.Contains(ctrl.Parent))
+                if (!this.ExistePanelConPaint(ctrl.Parent) && this.totalPanelesPaint < this.panelesConPaint.Length)
                 {
-                    this.panelesConPaint.Add(ctrl.Parent);
+                    this.panelesConPaint[this.totalPanelesPaint] = ctrl.Parent;
+                    this.totalPanelesPaint++;
                     ctrl.Parent.Paint += PintarBordesControles;
                 }
                 ctrl.Parent.Invalidate(new Rectangle(ctrl.Left - 4, ctrl.Top - 4, ctrl.Width + 8, ctrl.Height + 8));
@@ -379,12 +438,16 @@ namespace SIGEP_App
 
             foreach (Control c in panel.Controls)
             {
-                if (c.Visible && this.coloresBorde.ContainsKey(c))
+                if (c.Visible)
                 {
-                    Color col = this.coloresBorde[c];
-                    using (Pen pen = new Pen(col, 2f))
+                    int idx = this.BuscarIndiceControlBorde(c);
+                    if (idx != -1)
                     {
-                        e.Graphics.DrawRectangle(pen, c.Left - 1, c.Top - 1, c.Width + 1, c.Height + 1);
+                        Color col = this.coloresBorde[idx];
+                        using (Pen pen = new Pen(col, 2f))
+                        {
+                            e.Graphics.DrawRectangle(pen, c.Left - 1, c.Top - 1, c.Width + 1, c.Height + 1);
+                        }
                     }
                 }
             }
@@ -406,7 +469,7 @@ namespace SIGEP_App
 
             entry_widget.HandleCreated += (s, e) =>
             {
-                if (!this.coloresBorde.ContainsKey(entry_widget))
+                if (this.BuscarIndiceControlBorde(entry_widget) == -1)
                 {
                     this.ActualizarBorde(entry_widget, ColorTranslator.FromHtml("#cbd5e1"));
                 }
@@ -775,99 +838,107 @@ namespace SIGEP_App
 
         private string[] ObtenerRequisitosSacramento(string sacramento, bool tienePadrinos, string estadoCivilPadrinos)
         {
-            List<string> reqs = new List<string>();
+            string[] temp = new string[9];
+            int cant = 0;
+
             if (sacramento == "Bautizo")
             {
-                reqs.Add("1. Copia DNI Bautizado");
-                reqs.Add("2. Partida Nacimiento");
-                reqs.Add("3. Copia DNI Padre");
-                reqs.Add("4. Copia DNI Madre");
+                temp[cant++] = "1. Copia DNI Bautizado";
+                temp[cant++] = "2. Partida Nacimiento";
+                temp[cant++] = "3. Copia DNI Padre";
+                temp[cant++] = "4. Copia DNI Madre";
                 if (tienePadrinos)
                 {
-                    reqs.Add("5. Copia DNI Padrino / Madrina");
+                    temp[cant++] = "5. Copia DNI Padrino / Madrina";
                     if (estadoCivilPadrinos == "Casado(a)")
                     {
-                        reqs.Add("6. Partida Matrimonio Religioso Padrinos");
+                        temp[cant++] = "6. Partida Matrimonio Religioso Padrinos";
                     }
                     else
                     {
-                        reqs.Add("6. Constancia Confirmación Padrino/Madrina");
+                        temp[cant++] = "6. Constancia Confirmación Padrino/Madrina";
                     }
                 }
             }
             else if (sacramento == "Primera Comunión")
             {
-                reqs.Add("1. Copia DNI Comulgante");
-                reqs.Add("2. Partida Bautismo");
-                reqs.Add("3. Copia DNI Padre");
-                reqs.Add("4. Copia DNI Madre");
+                temp[cant++] = "1. Copia DNI Comulgante";
+                temp[cant++] = "2. Partida Bautismo";
+                temp[cant++] = "3. Copia DNI Padre";
+                temp[cant++] = "4. Copia DNI Madre";
                 if (tienePadrinos)
                 {
-                    reqs.Add("5. Copia DNI Padrino / Madrina");
+                    temp[cant++] = "5. Copia DNI Padrino / Madrina";
                 }
             }
             else if (sacramento == "Confirmación")
             {
-                reqs.Add("1. Copia DNI Confirmando");
-                reqs.Add("2. Partida Bautismo");
-                reqs.Add("3. Constancia 1ra Comunión");
+                temp[cant++] = "1. Copia DNI Confirmando";
+                temp[cant++] = "2. Partida Bautismo";
+                temp[cant++] = "3. Constancia 1ra Comunión";
                 if (tienePadrinos)
                 {
-                    reqs.Add("4. Copia DNI Padrino / Madrina");
+                    temp[cant++] = "4. Copia DNI Padrino / Madrina";
                     if (estadoCivilPadrinos == "Casado(a)")
                     {
-                        reqs.Add("5. Partida Matrimonio Religioso Padrinos");
+                        temp[cant++] = "5. Partida Matrimonio Religioso Padrinos";
                     }
                     else
                     {
-                        reqs.Add("5. Constancia Confirmación Padrino/Madrina");
+                        temp[cant++] = "5. Constancia Confirmación Padrino/Madrina";
                     }
                 }
             }
             else if (sacramento == "Matrimonio")
             {
-                reqs.Add("1. Copia DNI Novio");
-                reqs.Add("2. Copia DNI Novia");
-                reqs.Add("3. Partida Bautismo Novio");
-                reqs.Add("4. Partida Bautismo Novia");
-                reqs.Add("5. Confirmación Novio");
-                reqs.Add("6. Confirmación Novia");
-                reqs.Add("7. Copia DNI Testigo 1");
-                reqs.Add("8. Copia DNI Testigo 2");
-                reqs.Add("9. Copia DNI Padrinos");
+                temp[cant++] = "1. Copia DNI Novio";
+                temp[cant++] = "2. Copia DNI Novia";
+                temp[cant++] = "3. Partida Bautismo Novio";
+                temp[cant++] = "4. Partida Bautismo Novia";
+                temp[cant++] = "5. Confirmación Novio";
+                temp[cant++] = "6. Confirmación Novia";
+                temp[cant++] = "7. Copia DNI Testigo 1";
+                temp[cant++] = "8. Copia DNI Testigo 2";
+                temp[cant++] = "9. Copia DNI Padrinos";
             }
-            return reqs.ToArray();
+
+            string[] resultado = new string[cant];
+            for (int i = 0; i < cant; i++)
+            {
+                resultado[i] = temp[i];
+            }
+            return resultado;
         }
 
-        private void DesmarcarSoloRequisitosPadrino(string sacramento, List<CheckBox> listaChecks, bool desmarcarDniPadrino, bool desmarcarCertificadoEstadoCivil)
+        private void DesmarcarSoloRequisitosPadrino(string sacramento, CheckBox[] arregloChecks, bool desmarcarDniPadrino, bool desmarcarCertificadoEstadoCivil)
         {
             if (sacramento == "Bautizo")
             {
-                if (desmarcarDniPadrino && listaChecks.Count > 4)
+                if (desmarcarDniPadrino && arregloChecks.Length > 4 && arregloChecks[4] != null)
                 {
-                    listaChecks[4].Checked = false;
+                    arregloChecks[4].Checked = false;
                 }
-                if (desmarcarCertificadoEstadoCivil && listaChecks.Count > 5)
+                if (desmarcarCertificadoEstadoCivil && arregloChecks.Length > 5 && arregloChecks[5] != null)
                 {
-                    listaChecks[5].Checked = false;
+                    arregloChecks[5].Checked = false;
                 }
             }
             else if (sacramento == "Primera Comunión")
             {
-                if (desmarcarDniPadrino && listaChecks.Count > 4)
+                if (desmarcarDniPadrino && arregloChecks.Length > 4 && arregloChecks[4] != null)
                 {
-                    listaChecks[4].Checked = false;
+                    arregloChecks[4].Checked = false;
                 }
             }
             else if (sacramento == "Confirmación")
             {
-                if (desmarcarDniPadrino && listaChecks.Count > 3)
+                if (desmarcarDniPadrino && arregloChecks.Length > 3 && arregloChecks[3] != null)
                 {
-                    listaChecks[3].Checked = false;
+                    arregloChecks[3].Checked = false;
                 }
-                if (desmarcarCertificadoEstadoCivil && listaChecks.Count > 4)
+                if (desmarcarCertificadoEstadoCivil && arregloChecks.Length > 4 && arregloChecks[4] != null)
                 {
-                    listaChecks[4].Checked = false;
+                    arregloChecks[4].Checked = false;
                 }
             }
         }
@@ -1154,7 +1225,7 @@ namespace SIGEP_App
             card1.Controls.Add(lblCardTit);
 
             Label lblTotal = new Label();
-            lblTotal.Text = this.db.dnis_prin.Count.ToString();
+            lblTotal.Text = this.db.total_registros.ToString();
             lblTotal.Font = new Font("Segoe UI", 26f, FontStyle.Bold);
             lblTotal.ForeColor = ColorTranslator.FromHtml("#0f172a");
             lblTotal.Location = new Point(20, 50);
@@ -1190,18 +1261,19 @@ namespace SIGEP_App
             lblSub.AutoSize = true;
             f_conf.Controls.Add(lblSub);
 
-            List<string> lista_dias = new List<string>();
-            lista_dias.Add("--");
+            // Arreglos puros para días y meses
+            string[] lista_dias = new string[32];
+            lista_dias[0] = "--";
             for (int i = 1; i <= 31; i++)
             {
-                lista_dias.Add(i.ToString("D2"));
+                lista_dias[i] = i.ToString("D2");
             }
 
-            List<string> lista_meses = new List<string>();
-            lista_meses.Add("--");
+            string[] lista_meses = new string[13];
+            lista_meses[0] = "--";
             for (int i = 1; i <= 12; i++)
             {
-                lista_meses.Add(i.ToString("D2"));
+                lista_meses[i] = i.ToString("D2");
             }
 
             string[] partes_com = this.config.fecha_comunion.Split('/');
@@ -1221,7 +1293,7 @@ namespace SIGEP_App
 
             ComboBox cb_d_com = new ComboBox();
             cb_d_com.DropDownStyle = ComboBoxStyle.DropDownList;
-            cb_d_com.Items.AddRange(lista_dias.ToArray());
+            cb_d_com.Items.AddRange(lista_dias);
             cb_d_com.SelectedItem = c_dia;
             cb_d_com.Location = new Point(210, 68);
             cb_d_com.Width = 70;
@@ -1229,7 +1301,7 @@ namespace SIGEP_App
 
             ComboBox cb_m_com = new ComboBox();
             cb_m_com.DropDownStyle = ComboBoxStyle.DropDownList;
-            cb_m_com.Items.AddRange(lista_meses.ToArray());
+            cb_m_com.Items.AddRange(lista_meses);
             cb_m_com.SelectedItem = c_mes;
             cb_m_com.Location = new Point(290, 68);
             cb_m_com.Width = 70;
@@ -1252,7 +1324,7 @@ namespace SIGEP_App
 
             ComboBox cb_d_con = new ComboBox();
             cb_d_con.DropDownStyle = ComboBoxStyle.DropDownList;
-            cb_d_con.Items.AddRange(lista_dias.ToArray());
+            cb_d_con.Items.AddRange(lista_dias);
             cb_d_con.SelectedItem = cf_dia;
             cb_d_con.Location = new Point(210, 113);
             cb_d_con.Width = 70;
@@ -1260,7 +1332,7 @@ namespace SIGEP_App
 
             ComboBox cb_m_con = new ComboBox();
             cb_m_con.DropDownStyle = ComboBoxStyle.DropDownList;
-            cb_m_con.Items.AddRange(lista_meses.ToArray());
+            cb_m_con.Items.AddRange(lista_meses);
             cb_m_con.SelectedItem = cf_mes;
             cb_m_con.Location = new Point(290, 113);
             cb_m_con.Width = 70;
@@ -1417,7 +1489,6 @@ namespace SIGEP_App
             Label lblReqTit = new Label() { Text = "Requisitos de Documentación:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
             f_req.Controls.Add(lblReqTit);
 
-            this.chks.Clear();
             for (int i = 0; i < 9; i++)
             {
                 CheckBox chk = new CheckBox();
@@ -1425,7 +1496,7 @@ namespace SIGEP_App
                 int col = i % 2;
                 int fila = i / 2;
                 chk.Location = new Point(20 + (col * 420), 38 + (fila * 27));
-                this.chks.Add(chk);
+                this.chks[i] = chk;
                 f_req.Controls.Add(chk);
             }
             f_main.Controls.Add(f_req);
@@ -1455,20 +1526,23 @@ namespace SIGEP_App
 
             Action actualizar_obs_auto = () =>
             {
-                List<string> faltantes = new List<string>();
+                string[] faltantes = new string[9];
+                int cantFaltantes = 0;
+
                 for (int i = 0; i < this.reqs_activos; i++)
                 {
                     if (!this.chks[i].Checked)
                     {
                         string texto_limpio = this.chks[i].Text.Substring(3);
-                        faltantes.Add(texto_limpio);
+                        faltantes[cantFaltantes] = texto_limpio;
+                        cantFaltantes++;
                     }
                 }
 
                 string texto = "";
-                if (faltantes.Count > 0)
+                if (cantFaltantes > 0)
                 {
-                    texto = "Faltan los siguientes documentos físicos:\r\n- " + string.Join("\r\n- ", faltantes) + "\r\n";
+                    texto = "Faltan los siguientes documentos físicos:\r\n- " + this.UnirArregloConSeparador(faltantes, cantFaltantes, "\r\n- ") + "\r\n";
                 }
                 else
                 {
@@ -1551,7 +1625,7 @@ namespace SIGEP_App
 
                 string[] reqs = this.ObtenerRequisitosSacramento(eleccion, tienePad, estPad);
                 this.reqs_activos = reqs.Length;
-                for (int j = 0; j < this.chks.Count; j++)
+                for (int j = 0; j < this.chks.Length; j++)
                 {
                     if (j < reqs.Length)
                     {
@@ -1570,7 +1644,7 @@ namespace SIGEP_App
 
             cb_tipo.SelectedIndexChanged += (s, e) =>
             {
-                for (int j = 0; j < this.chks.Count; j++)
+                for (int j = 0; j < this.chks.Length; j++)
                 {
                     this.chks[j].Checked = false;
                 }
@@ -1644,18 +1718,20 @@ namespace SIGEP_App
                     return;
                 }
 
-                List<string> errores = new List<string>();
+                string[] errores = new string[20];
+                int cantErrores = 0;
+
                 if (dni1_val.Length != 8 || dni1_val == "00000000")
                 {
-                    errores.Add("- El " + this.ObtenerEtiquetaDniPorSacramento(tipo_sel).Replace(":", "") + " debe tener 8 dígitos numéricos válidos.");
+                    errores[cantErrores++] = "- El " + this.ObtenerEtiquetaDniPorSacramento(tipo_sel).Replace(":", "") + " debe tener 8 dígitos numéricos válidos.";
                 }
                 if (!this.EsNombreValido(nom1_val))
                 {
-                    errores.Add("- Los Nombres del titular deben contener al menos 2 letras válidas.");
+                    errores[cantErrores++] = "- Los Nombres del titular deben contener al menos 2 letras válidas.";
                 }
                 if (!this.EsNombreValido(ape1_val))
                 {
-                    errores.Add("- Los Apellidos del titular deben contener al menos 2 letras válidas.");
+                    errores[cantErrores++] = "- Los Apellidos del titular deben contener al menos 2 letras válidas.";
                 }
 
                 if (tipo_sel == "Matrimonio")
@@ -1666,38 +1742,38 @@ namespace SIGEP_App
 
                     if (dni2_val.Length != 8 || dni2_val == "00000000")
                     {
-                        errores.Add("- El DNI Novia debe tener 8 dígitos numéricos válidos.");
+                        errores[cantErrores++] = "- El DNI Novia debe tener 8 dígitos numéricos válidos.";
                     }
                     if (!this.EsNombreValido(nom2_val))
                     {
-                        errores.Add("- Los Nombres de la Novia deben contener al menos 2 letras válidas.");
+                        errores[cantErrores++] = "- Los Nombres de la Novia deben contener al menos 2 letras válidas.";
                     }
                     if (!this.EsNombreValido(ape2_val))
                     {
-                        errores.Add("- Los Apellidos de la Novia deben contener al menos 2 letras válidas.");
+                        errores[cantErrores++] = "- Los Apellidos de la Novia deben contener al menos 2 letras válidas.";
                     }
                     if (dni1_val != "" && dni1_val == dni2_val)
                     {
-                        errores.Add("- No se pueden colocar 2 DNIs iguales. Los DNIs de los novios deben ser diferentes.");
+                        errores[cantErrores++] = "- No se pueden colocar 2 DNIs iguales. Los DNIs de los novios deben ser diferentes.";
                     }
                     if (nom1_val != "" && ape1_val != "" && (nom1_val + " " + ape1_val) == (nom2_val + " " + ape2_val))
                     {
-                        errores.Add("- Los nombres y apellidos de los novios no pueden ser iguales.");
+                        errores[cantErrores++] = "- Los nombres y apellidos de los novios no pueden ser iguales.";
                     }
                 }
 
-                for (int idxExist = 0; idxExist < this.db.dnis_prin.Count; idxExist++)
+                for (int idxExist = 0; idxExist < this.db.total_registros; idxExist++)
                 {
                     if (this.db.tipos[idxExist] == tipo_sel)
                     {
                         if (this.db.dnis_prin[idxExist] == dni1_val || (tipo_sel == "Matrimonio" && this.db.dnis_sec[idxExist] == dni1_val))
                         {
-                            errores.Add("- El DNI " + dni1_val + " ya se encuentra registrado en " + tipo_sel + ".");
+                            errores[cantErrores++] = "- El DNI " + dni1_val + " ya se encuentra registrado en " + tipo_sel + ".";
                             break;
                         }
                         if (tipo_sel == "Matrimonio" && (this.db.dnis_prin[idxExist] == dni2_val || this.db.dnis_sec[idxExist] == dni2_val))
                         {
-                            errores.Add("- El DNI " + dni2_val + " ya se encuentra registrado en " + tipo_sel + ".");
+                            errores[cantErrores++] = "- El DNI " + dni2_val + " ya se encuentra registrado en " + tipo_sel + ".";
                             break;
                         }
                     }
@@ -1705,11 +1781,11 @@ namespace SIGEP_App
 
                 if (tipo_sel == "Primera Comunión" && this.config.fecha_comunion == "--/--")
                 {
-                    errores.Add("- Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de registrar.");
+                    errores[cantErrores++] = "- Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de registrar.";
                 }
                 if (tipo_sel == "Confirmación" && this.config.fecha_confirmacion == "--/--")
                 {
-                    errores.Add("- Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de registrar.");
+                    errores[cantErrores++] = "- Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de registrar.";
                 }
 
                 string pago = cb_pago.SelectedItem.ToString();
@@ -1720,7 +1796,7 @@ namespace SIGEP_App
                     double monto_float = 0;
                     if (deuda == "" || !double.TryParse(deuda, NumberStyles.Any, CultureInfo.InvariantCulture, out monto_float) || monto_float <= 0)
                     {
-                        errores.Add("- Debe especificar un monto de deuda válido mayor a 0.");
+                        errores[cantErrores++] = "- Debe especificar un monto de deuda válido mayor a 0.";
                     }
                 }
 
@@ -1730,13 +1806,13 @@ namespace SIGEP_App
                     obs_adic_txt = txt_obs_adic.Text.Trim();
                     if (obs_adic_txt == "")
                     {
-                        errores.Add("- Ha marcado añadir observación adicional manual, pero la caja está vacía.");
+                        errores[cantErrores++] = "- Ha marcado añadir observación adicional manual, pero la caja está vacía.";
                     }
                 }
 
-                if (errores.Count > 0)
+                if (cantErrores > 0)
                 {
-                    MessageBox.Show("Se detectaron los siguientes errores:\n\n" + string.Join("\n", errores), "Datos Incompletos o Inválidos", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Se detectaron los siguientes errores:\n\n" + this.UnirArregloConSeparador(errores, cantErrores, "\n"), "Datos Incompletos o Inválidos", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -1759,12 +1835,12 @@ namespace SIGEP_App
                     return;
                 }
 
-                List<string> lista_chks = new List<string>();
+                string[] arr_chks = new string[this.reqs_activos];
                 for (int k = 0; k < this.reqs_activos; k++)
                 {
-                    lista_chks.Add(this.chks[k].Checked ? "1" : "0");
+                    arr_chks[k] = this.chks[k].Checked ? "1" : "0";
                 }
-                string chks_str = string.Join("-", lista_chks);
+                string chks_str = this.UnirArregloConSeparador(arr_chks, this.reqs_activos, "-");
 
                 this.db.registrar(
                     "TRAMITE",
@@ -1798,7 +1874,7 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(f_main);
         }
 
-        // ================= 6. BUSCAR Y EDITAR (CON FORMATO DEBAJO DE FECHA OFICIAL) =================
+        // ================= 6. BUSCAR Y EDITAR =================
         private void mostrar_buscar()
         {
             this.limpiar_contenido();
@@ -1939,7 +2015,6 @@ namespace SIGEP_App
             Label lblReqEditTit = new Label() { Text = "Requisitos de Documentación:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
             f_req_edit.Controls.Add(lblReqEditTit);
 
-            this.chks_edit.Clear();
             for (int i = 0; i < 9; i++)
             {
                 CheckBox chk = new CheckBox();
@@ -1947,7 +2022,7 @@ namespace SIGEP_App
                 int col = i % 2;
                 int fila = i / 2;
                 chk.Location = new Point(20 + (col * 430), 34 + (fila * 27));
-                this.chks_edit.Add(chk);
+                this.chks_edit[i] = chk;
                 f_req_edit.Controls.Add(chk);
             }
             f_edit.Controls.Add(f_req_edit);
@@ -1964,7 +2039,6 @@ namespace SIGEP_App
             f_obs_der_edit.Controls.AddRange(new Control[] { chk_adic_edit, txt_obs_adic_edit });
             f_edit.Controls.Add(f_obs_der_edit);
 
-            // Fecha Oficial con el modelo (DD/MM/AAAA) debajo entre paréntesis
             Label lblFecOf = new Label() { Text = "Fecha Oficial:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 495), AutoSize = true };
             Label lblFecMod = new Label() { Text = "(DD/MM/AAAA)", Font = new Font("Segoe UI", 8.5f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), Location = new Point(20, 515), AutoSize = true };
             TextBox t_fec = new TextBox() { Location = new Point(135, 502), Width = 135 };
@@ -1996,20 +2070,23 @@ namespace SIGEP_App
                 {
                     return;
                 }
-                List<string> faltantes = new List<string>();
+                string[] faltantes = new string[9];
+                int cantFaltantes = 0;
+
                 for (int j = 0; j < this.reqs_activos_edit; j++)
                 {
                     if (!this.chks_edit[j].Checked)
                     {
                         string texto_limpio = this.chks_edit[j].Text.Substring(3);
-                        faltantes.Add(texto_limpio);
+                        faltantes[cantFaltantes] = texto_limpio;
+                        cantFaltantes++;
                     }
                 }
 
                 string texto = "";
-                if (faltantes.Count > 0)
+                if (cantFaltantes > 0)
                 {
-                    texto = "Faltan los siguientes documentos físicos:\r\n- " + string.Join("\r\n- ", faltantes) + "\r\n";
+                    texto = "Faltan los siguientes documentos físicos:\r\n- " + this.UnirArregloConSeparador(faltantes, cantFaltantes, "\r\n- ") + "\r\n";
                 }
                 else
                 {
@@ -2023,7 +2100,7 @@ namespace SIGEP_App
 
                 txt_obs_auto_edit.Text = texto.Trim();
 
-                if (faltantes.Count == 0 && c_pag.SelectedItem != null && c_pag.SelectedItem.ToString() == "Pagado")
+                if (cantFaltantes == 0 && c_pag.SelectedItem != null && c_pag.SelectedItem.ToString() == "Pagado")
                 {
                     if (c_est.SelectedItem != null && c_est.SelectedItem.ToString() == "Observado")
                     {
@@ -2031,7 +2108,7 @@ namespace SIGEP_App
                     }
                 }
 
-                if (faltantes.Count > 0 || (c_pag.SelectedItem != null && c_pag.SelectedItem.ToString() == "Falta Pagar"))
+                if (cantFaltantes > 0 || (c_pag.SelectedItem != null && c_pag.SelectedItem.ToString() == "Falta Pagar"))
                 {
                     if (c_est.SelectedItem != null && c_est.SelectedItem.ToString() == "Inscrito(a)")
                     {
@@ -2042,7 +2119,7 @@ namespace SIGEP_App
 
             Action reconstruir_requisitos_edicion = () =>
             {
-                if (idx_actual < 0 || idx_actual >= this.db.tipos.Count)
+                if (idx_actual < 0 || idx_actual >= this.db.total_registros)
                 {
                     return;
                 }
@@ -2056,7 +2133,7 @@ namespace SIGEP_App
 
                 string[] reqs = this.ObtenerRequisitosSacramento(tipo, tienePad, estPad);
                 this.reqs_activos_edit = reqs.Length;
-                for (int k = 0; k < this.chks_edit.Count; k++)
+                for (int k = 0; k < this.chks_edit.Length; k++)
                 {
                     if (k < reqs.Length)
                     {
@@ -2079,7 +2156,7 @@ namespace SIGEP_App
 
             chk_e_padrinos.CheckedChanged += (s, e) =>
             {
-                if (!cargandoEdicion && idx_actual >= 0 && idx_actual < this.db.tipos.Count)
+                if (!cargandoEdicion && idx_actual >= 0 && idx_actual < this.db.total_registros)
                 {
                     this.DesmarcarSoloRequisitosPadrino(this.db.tipos[idx_actual], this.chks_edit, true, true);
                     reconstruir_requisitos_edicion();
@@ -2088,7 +2165,7 @@ namespace SIGEP_App
 
             cb_e_est_pad.SelectedIndexChanged += (s, e) =>
             {
-                if (!cargandoEdicion && idx_actual >= 0 && idx_actual < this.db.tipos.Count)
+                if (!cargandoEdicion && idx_actual >= 0 && idx_actual < this.db.total_registros)
                 {
                     this.DesmarcarSoloRequisitosPadrino(this.db.tipos[idx_actual], this.chks_edit, false, true);
                     reconstruir_requisitos_edicion();
@@ -2124,7 +2201,7 @@ namespace SIGEP_App
 
             Action<int> cargarExpedienteEnEditor = (idx) =>
             {
-                if (idx < 0 || idx >= this.db.dnis_prin.Count)
+                if (idx < 0 || idx >= this.db.total_registros)
                 {
                     f_edit.Visible = false;
                     return;
@@ -2240,11 +2317,11 @@ namespace SIGEP_App
                 f_edit.Invalidate();
             };
 
-            Action<List<int>, bool> poblarTablaResultados = (indices, mostrarMensaje) =>
+            Action<int[], bool> poblarTablaResultados = (indices, mostrarMensaje) =>
             {
                 llenandoTabla = true;
                 tablaResultados.Rows.Clear();
-                for (int r = 0; r < indices.Count; r++)
+                for (int r = 0; r < indices.Length; r++)
                 {
                     int idx = indices[r];
                     string dniMostrar = this.db.dnis_prin[idx];
@@ -2270,13 +2347,13 @@ namespace SIGEP_App
                 }
                 llenandoTabla = false;
 
-                if (indices.Count > 0)
+                if (indices.Length > 0)
                 {
                     tablaResultados.Rows[0].Selected = true;
                     cargarExpedienteEnEditor(indices[0]);
                     if (mostrarMensaje)
                     {
-                        MessageBox.Show("Se encontraron " + indices.Count + " expediente(s).", "Búsqueda Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("Se encontraron " + indices.Length + " expediente(s).", "Búsqueda Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
                 else
@@ -2326,11 +2403,11 @@ namespace SIGEP_App
                         MessageBox.Show("El DNI ingresado es incorrecto. Debe contener exactamente 8 dígitos numéricos válidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
-                    List<int> res = this.db.buscar_indices_por_dni(dni_val, true);
-                    if (res.Count == 0)
+                    int[] res = this.db.buscar_indices_por_dni(dni_val, true);
+                    if (res.Length == 0)
                     {
-                        List<int> resAntiguo = this.db.buscar_indices_por_dni(dni_val, false);
-                        if (resAntiguo.Count > 0)
+                        int[] resAntiguo = this.db.buscar_indices_por_dni(dni_val, false);
+                        if (resAntiguo.Length > 0)
                         {
                             MessageBox.Show("El DNI " + dni_val + " pertenece a una Constancia Antigua registrada en 'Opciones Avanzadas'. Diríjase a esa pestaña para editarlo.", "Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             return;
@@ -2352,11 +2429,11 @@ namespace SIGEP_App
                         MessageBox.Show("Ingrese al menos 2 letras válidas para buscar por apellidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
-                    List<int> res = this.db.buscar_indices_por_apellidos(ape_val, true);
-                    if (res.Count == 0)
+                    int[] res = this.db.buscar_indices_por_apellidos(ape_val, true);
+                    if (res.Length == 0)
                     {
-                        List<int> resAntiguo = this.db.buscar_indices_por_apellidos(ape_val, false);
-                        if (resAntiguo.Count > 0)
+                        int[] resAntiguo = this.db.buscar_indices_por_apellidos(ape_val, false);
+                        if (resAntiguo.Length > 0)
                         {
                             MessageBox.Show("El apellido '" + ape_val + "' corresponde a una Constancia Antigua registrada en 'Opciones Avanzadas'.", "Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             return;
@@ -2388,7 +2465,7 @@ namespace SIGEP_App
 
             btn_act.Click += (s, e) =>
             {
-                if (idx_actual < 0 || idx_actual >= this.db.dnis_prin.Count)
+                if (idx_actual < 0 || idx_actual >= this.db.total_registros)
                 {
                     return;
                 }
@@ -2447,7 +2524,7 @@ namespace SIGEP_App
                     }
                 }
 
-                for (int idxExist = 0; idxExist < this.db.dnis_prin.Count; idxExist++)
+                for (int idxExist = 0; idxExist < this.db.total_registros; idxExist++)
                 {
                     if (idxExist != i && this.db.tipos[idxExist] == tipo_actual)
                     {
@@ -2570,12 +2647,12 @@ namespace SIGEP_App
                     return;
                 }
 
-                List<string> lista_chks_e = new List<string>();
+                string[] arr_chks_e = new string[this.reqs_activos_edit];
                 for (int j = 0; j < this.reqs_activos_edit; j++)
                 {
-                    lista_chks_e.Add(this.chks_edit[j].Checked ? "1" : "0");
+                    arr_chks_e[j] = this.chks_edit[j].Checked ? "1" : "0";
                 }
-                string chks_str = string.Join("-", lista_chks_e);
+                string chks_str = this.UnirArregloConSeparador(arr_chks_e, this.reqs_activos_edit, "-");
                 string t_pad_str = (tipo_actual == "Matrimonio") ? "SI" : (chk_e_padrinos.Checked ? "SI" : "NO");
                 string est_pad_str = ((tipo_actual == "Bautizo" || tipo_actual == "Confirmación") && chk_e_padrinos.Checked) ? cb_e_est_pad.SelectedItem.ToString() : "---";
 
@@ -2622,7 +2699,7 @@ namespace SIGEP_App
 
             btn_eli.Click += (s, e) =>
             {
-                if (idx_actual < 0 || idx_actual >= this.db.dnis_prin.Count)
+                if (idx_actual < 0 || idx_actual >= this.db.total_registros)
                 {
                     return;
                 }
@@ -2724,7 +2801,7 @@ namespace SIGEP_App
 
                 string f_sac = cb_filtro_sac.SelectedItem.ToString();
 
-                for (int i = 0; i < this.db.dnis_prin.Count; i++)
+                for (int i = 0; i < this.db.total_registros; i++)
                 {
                     if (f_sac != "Todos" && this.db.tipos[i] != f_sac)
                     {
@@ -2787,7 +2864,7 @@ namespace SIGEP_App
 
             btnExportar.Click += (s, e) =>
             {
-                if (this.db.dnis_prin.Count == 0)
+                if (this.db.total_registros == 0)
                 {
                     MessageBox.Show("No hay expedientes registrados en el sistema para exportar.", "Vacío", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
@@ -2806,9 +2883,10 @@ namespace SIGEP_App
                     }
                 }
 
-                List<ItemReporte> filtrados = new List<ItemReporte>();
+                ItemReporte[] filtrados = new ItemReporte[this.db.total_registros];
+                int cantFiltrados = 0;
 
-                for (int i = 0; i < this.db.dnis_prin.Count; i++)
+                for (int i = 0; i < this.db.total_registros; i++)
                 {
                     if (f_sac != "Todos" && this.db.tipos[i] != f_sac)
                     {
@@ -2838,10 +2916,11 @@ namespace SIGEP_App
                     item.dni = this.db.dnis_prin[i];
                     item.est = this.db.estados[i];
                     item.deuda = texto_deuda;
-                    filtrados.Add(item);
+                    filtrados[cantFiltrados] = item;
+                    cantFiltrados++;
                 }
 
-                if (filtrados.Count == 0)
+                if (cantFiltrados == 0)
                 {
                     MessageBox.Show("No hay expedientes que coincidan con los filtros actuales para exportar.", "Vacío", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
@@ -2853,7 +2932,7 @@ namespace SIGEP_App
                 sfd.Filter = "PDF (*.pdf)|*.pdf";
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
-                    this.logica.generar_reporte_general_pdf(sfd.FileName, filtrados);
+                    this.logica.generar_reporte_general_pdf(sfd.FileName, filtrados, cantFiltrados);
                     MessageBox.Show("Reporte exportado correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             };
@@ -2955,7 +3034,6 @@ namespace SIGEP_App
 
             f_form.Controls.AddRange(new Control[] { lblFec, lblFecModH, txt_fec, lblLib, txt_lib, lblFol, txt_fol, lblAsi, txt_asi });
 
-            // Autodetección de constancia antigua existente al escribir DNI o Nombre+Apellido
             Action buscarConstanciaExistente = () =>
             {
                 if (cargandoExistente || cb_sac.SelectedItem == null || cb_modo_dni.SelectedItem == null)
@@ -2971,7 +3049,7 @@ namespace SIGEP_App
                     string d1 = txt_dni1.Text.Trim();
                     if (d1.Length == 8)
                     {
-                        for (int i = 0; i < this.db.dnis_prin.Count; i++)
+                        for (int i = 0; i < this.db.total_registros; i++)
                         {
                             if (this.db.origenes[i] == "ANTIGUO" && this.db.tipos[i] == sacSel && (this.db.dnis_prin[i] == d1 || this.db.dnis_sec[i] == d1))
                             {
@@ -2987,7 +3065,7 @@ namespace SIGEP_App
                     string a1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape1.Text), @"\s+", " ");
                     if (n1.Length >= 2 && a1.Length >= 2)
                     {
-                        for (int i = 0; i < this.db.dnis_prin.Count; i++)
+                        for (int i = 0; i < this.db.total_registros; i++)
                         {
                             if (this.db.origenes[i] == "ANTIGUO" && this.db.tipos[i] == sacSel && this.db.nombres[i] == n1 && this.db.apellidos[i] == a1)
                             {
@@ -3115,22 +3193,23 @@ namespace SIGEP_App
                 string fol = txt_fol.Text.Trim();
                 string asi = txt_asi.Text.Trim();
 
-                List<string> errores = new List<string>();
+                string[] errores = new string[20];
+                int cantErrores = 0;
 
                 if (conDni)
                 {
                     if (d1.Length != 8 || d1 == "00000000")
                     {
-                        errores.Add("- El " + this.ObtenerEtiquetaDniPorSacramento(sac).Replace(":", "") + " debe tener exactamente 8 dígitos numéricos válidos.");
+                        errores[cantErrores++] = "- El " + this.ObtenerEtiquetaDniPorSacramento(sac).Replace(":", "") + " debe tener exactamente 8 dígitos numéricos válidos.";
                     }
                 }
                 if (!this.EsNombreValido(n1))
                 {
-                    errores.Add("- El Nombre es obligatorio (mínimo 2 letras).");
+                    errores[cantErrores++] = "- El Nombre es obligatorio (mínimo 2 letras).";
                 }
                 if (!this.EsNombreValido(a1))
                 {
-                    errores.Add("- El Apellido es obligatorio (mínimo 2 letras).");
+                    errores[cantErrores++] = "- El Apellido es obligatorio (mínimo 2 letras).";
                 }
 
                 if (sac == "Matrimonio")
@@ -3139,58 +3218,58 @@ namespace SIGEP_App
                     {
                         if (d2.Length != 8 || d2 == "00000000")
                         {
-                            errores.Add("- El DNI Novia debe tener 8 dígitos numéricos válidos.");
+                            errores[cantErrores++] = "- El DNI Novia debe tener 8 dígitos numéricos válidos.";
                         }
                         if (d1 != "" && d1 == d2)
                         {
-                            errores.Add("- No puede ingresar 2 DNIs iguales. Los DNIs de los esposos deben ser diferentes.");
+                            errores[cantErrores++] = "- No puede ingresar 2 DNIs iguales. Los DNIs de los esposos deben ser diferentes.";
                         }
                     }
                     if (!this.EsNombreValido(n2))
                     {
-                        errores.Add("- El Nombre de la Novia es obligatorio.");
+                        errores[cantErrores++] = "- El Nombre de la Novia es obligatorio.";
                     }
                     if (!this.EsNombreValido(a2))
                     {
-                        errores.Add("- El Apellido de la Novia es obligatorio.");
+                        errores[cantErrores++] = "- El Apellido de la Novia es obligatorio.";
                     }
                     if (n1 != "" && a1 != "" && (n1 + " " + a1) == (n2 + " " + a2))
                     {
-                        errores.Add("- Los nombres y apellidos de ambos cónyuges no pueden ser idénticos.");
+                        errores[cantErrores++] = "- Los nombres y apellidos de ambos cónyuges no pueden ser idénticos.";
                     }
                 }
 
                 DateTime fechaObj;
                 if (fec.Length != 10 || !DateTime.TryParseExact(fec, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out fechaObj))
                 {
-                    errores.Add("- La Fecha debe ser una fecha real en formato DD/MM/AAAA.");
+                    errores[cantErrores++] = "- La Fecha debe ser una fecha real en formato DD/MM/AAAA.";
                 }
                 else
                 {
                     if (fechaObj.Date > DateTime.Now.Date)
                     {
-                        errores.Add("- Al ser una Constancia Antigua, la fecha en que recibió el sacramento no puede ser futura.");
+                        errores[cantErrores++] = "- Al ser una Constancia Antigua, la fecha en que recibió el sacramento no puede ser futura.";
                     }
                     if (fechaObj.Year < 1900)
                     {
-                        errores.Add("- El año de la fecha debe ser válido (mayor o igual a 1900).");
+                        errores[cantErrores++] = "- El año de la fecha debe ser válido (mayor o igual a 1900).";
                     }
                 }
 
                 if (!this.EsNumeroPositivoValido(lib))
                 {
-                    errores.Add("- El Libro es obligatorio y solo admite números enteros positivos.");
+                    errores[cantErrores++] = "- El Libro es obligatorio y solo admite números enteros positivos.";
                 }
                 if (!this.EsNumeroPositivoValido(fol))
                 {
-                    errores.Add("- El Folio es obligatorio y solo admite números enteros positivos.");
+                    errores[cantErrores++] = "- El Folio es obligatorio y solo admite números enteros positivos.";
                 }
                 if (!this.EsNumeroPositivoValido(asi))
                 {
-                    errores.Add("- El Asiento es obligatorio y solo admite números enteros positivos.");
+                    errores[cantErrores++] = "- El Asiento es obligatorio y solo admite números enteros positivos.";
                 }
 
-                for (int i = 0; i < this.db.dnis_prin.Count; i++)
+                for (int i = 0; i < this.db.total_registros; i++)
                 {
                     if (i == idxIgnorar)
                     {
@@ -3202,12 +3281,12 @@ namespace SIGEP_App
                         {
                             if (this.db.dnis_prin[i] == d1 || (sac == "Matrimonio" && this.db.dnis_sec[i] == d1))
                             {
-                                errores.Add("- El DNI " + d1 + " ya se encuentra registrado en " + sac + ".");
+                                errores[cantErrores++] = "- El DNI " + d1 + " ya se encuentra registrado en " + sac + ".";
                                 break;
                             }
                             if (sac == "Matrimonio" && (this.db.dnis_prin[i] == d2 || this.db.dnis_sec[i] == d2))
                             {
-                                errores.Add("- El DNI " + d2 + " ya se encuentra registrado en " + sac + ".");
+                                errores[cantErrores++] = "- El DNI " + d2 + " ya se encuentra registrado en " + sac + ".";
                                 break;
                             }
                         }
@@ -3215,16 +3294,16 @@ namespace SIGEP_App
                         {
                             if (this.db.nombres[i] == n1 && this.db.apellidos[i] == a1)
                             {
-                                errores.Add("- Ya existe un registro de " + sac + " para " + n1 + " " + a1 + ".");
+                                errores[cantErrores++] = "- Ya existe un registro de " + sac + " para " + n1 + " " + a1 + ".";
                                 break;
                             }
                         }
                     }
                 }
 
-                if (errores.Count > 0)
+                if (cantErrores > 0)
                 {
-                    MessageBox.Show("Por favor corrija los siguientes errores:\n\n" + string.Join("\n", errores), "Validación de Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Por favor corrija los siguientes errores:\n\n" + this.UnirArregloConSeparador(errores, cantErrores, "\n"), "Validación de Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return false;
                 }
                 return true;

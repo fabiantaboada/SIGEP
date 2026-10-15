@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -53,31 +52,34 @@ namespace SIGEP_App
 
     public class BaseDatos
     {
+        public const int MAX_REGISTROS = 5000;
         public string archivo;
         private static readonly CultureInfo CulturaEs = new CultureInfo("es-PE");
 
-        // Arreglos paralelos separados por celdas individuales (21 columnas)
-        public List<string> origenes = new List<string>();
-        public List<string> dnis_prin = new List<string>();
-        public List<string> nombres = new List<string>();
-        public List<string> apellidos = new List<string>();
-        public List<string> dnis_sec = new List<string>();
-        public List<string> nombres_sec = new List<string>();
-        public List<string> apellidos_sec = new List<string>();
-        public List<string> generos = new List<string>();
-        public List<string> tipos = new List<string>();
-        public List<string> estados = new List<string>();
-        public List<string> tiene_padrinos = new List<string>();
-        public List<string> estado_padrinos = new List<string>();
-        public List<string> checks_mem = new List<string>();
-        public List<string> obs_auto = new List<string>();
-        public List<string> obs_adic = new List<string>();
-        public List<string> fechas_sac = new List<string>();
-        public List<string> libros = new List<string>();
-        public List<string> folios = new List<string>();
-        public List<string> asientos = new List<string>();
-        public List<string> pagos = new List<string>();
-        public List<string> deudas = new List<string>();
+        // Arreglos paralelos unidimensionales puros (21 columnas)
+        public string[] origenes = new string[MAX_REGISTROS];
+        public string[] dnis_prin = new string[MAX_REGISTROS];
+        public string[] nombres = new string[MAX_REGISTROS];
+        public string[] apellidos = new string[MAX_REGISTROS];
+        public string[] dnis_sec = new string[MAX_REGISTROS];
+        public string[] nombres_sec = new string[MAX_REGISTROS];
+        public string[] apellidos_sec = new string[MAX_REGISTROS];
+        public string[] generos = new string[MAX_REGISTROS];
+        public string[] tipos = new string[MAX_REGISTROS];
+        public string[] estados = new string[MAX_REGISTROS];
+        public string[] tiene_padrinos = new string[MAX_REGISTROS];
+        public string[] estado_padrinos = new string[MAX_REGISTROS];
+        public string[] checks_mem = new string[MAX_REGISTROS];
+        public string[] obs_auto = new string[MAX_REGISTROS];
+        public string[] obs_adic = new string[MAX_REGISTROS];
+        public string[] fechas_sac = new string[MAX_REGISTROS];
+        public string[] libros = new string[MAX_REGISTROS];
+        public string[] folios = new string[MAX_REGISTROS];
+        public string[] asientos = new string[MAX_REGISTROS];
+        public string[] pagos = new string[MAX_REGISTROS];
+        public string[] deudas = new string[MAX_REGISTROS];
+
+        public int total_registros = 0;
 
         public BaseDatos()
         {
@@ -132,11 +134,14 @@ namespace SIGEP_App
             return v;
         }
 
-        public static List<string[]> LeerTodoCsv(string ruta)
+        public static string[][] LeerTodoCsv(string ruta)
         {
-            List<string[]> filas = new List<string[]>();
+            string[][] filasTemp = new string[MAX_REGISTROS + 10][];
+            int totalFilas = 0;
+
             string contenido = File.ReadAllText(ruta, Encoding.UTF8);
-            List<string> filaActual = new List<string>();
+            string[] filaActual = new string[30];
+            int colActual = 0;
             StringBuilder celdaActual = new StringBuilder();
             bool enComillas = false;
 
@@ -170,7 +175,11 @@ namespace SIGEP_App
                     }
                     else if (c == ',')
                     {
-                        filaActual.Add(celdaActual.ToString());
+                        if (colActual < filaActual.Length)
+                        {
+                            filaActual[colActual] = celdaActual.ToString();
+                            colActual++;
+                        }
                         celdaActual.Clear();
                     }
                     else if (c == '\r')
@@ -179,13 +188,27 @@ namespace SIGEP_App
                     }
                     else if (c == '\n')
                     {
-                        filaActual.Add(celdaActual.ToString());
-                        celdaActual.Clear();
-                        if (filaActual.Count > 1 || (filaActual.Count == 1 && filaActual[0].Trim() != ""))
+                        if (colActual < filaActual.Length)
                         {
-                            filas.Add(filaActual.ToArray());
+                            filaActual[colActual] = celdaActual.ToString();
+                            colActual++;
                         }
-                        filaActual.Clear();
+                        celdaActual.Clear();
+
+                        if (colActual > 1 || (colActual == 1 && filaActual[0].Trim() != ""))
+                        {
+                            string[] filaDefinitiva = new string[colActual];
+                            for (int k = 0; k < colActual; k++)
+                            {
+                                filaDefinitiva[k] = filaActual[k];
+                            }
+                            if (totalFilas < filasTemp.Length)
+                            {
+                                filasTemp[totalFilas] = filaDefinitiva;
+                                totalFilas++;
+                            }
+                        }
+                        colActual = 0;
                     }
                     else
                     {
@@ -194,16 +217,34 @@ namespace SIGEP_App
                 }
             }
 
-            if (celdaActual.Length > 0 || filaActual.Count > 0)
+            if (celdaActual.Length > 0 || colActual > 0)
             {
-                filaActual.Add(celdaActual.ToString());
-                if (filaActual.Count > 1 || (filaActual.Count == 1 && filaActual[0].Trim() != ""))
+                if (colActual < filaActual.Length)
                 {
-                    filas.Add(filaActual.ToArray());
+                    filaActual[colActual] = celdaActual.ToString();
+                    colActual++;
+                }
+                if (colActual > 1 || (colActual == 1 && filaActual[0].Trim() != ""))
+                {
+                    string[] filaDefinitiva = new string[colActual];
+                    for (int k = 0; k < colActual; k++)
+                    {
+                        filaDefinitiva[k] = filaActual[k];
+                    }
+                    if (totalFilas < filasTemp.Length)
+                    {
+                        filasTemp[totalFilas] = filaDefinitiva;
+                        totalFilas++;
+                    }
                 }
             }
 
-            return filas;
+            string[][] resultado = new string[totalFilas][];
+            for (int i = 0; i < totalFilas; i++)
+            {
+                resultado[i] = filasTemp[i];
+            }
+            return resultado;
         }
 
         public void crear_cabeceras()
@@ -214,27 +255,7 @@ namespace SIGEP_App
 
         public void limpiar_arreglos()
         {
-            this.origenes.Clear();
-            this.dnis_prin.Clear();
-            this.nombres.Clear();
-            this.apellidos.Clear();
-            this.dnis_sec.Clear();
-            this.nombres_sec.Clear();
-            this.apellidos_sec.Clear();
-            this.generos.Clear();
-            this.tipos.Clear();
-            this.estados.Clear();
-            this.tiene_padrinos.Clear();
-            this.estado_padrinos.Clear();
-            this.checks_mem.Clear();
-            this.obs_auto.Clear();
-            this.obs_adic.Clear();
-            this.fechas_sac.Clear();
-            this.libros.Clear();
-            this.folios.Clear();
-            this.asientos.Clear();
-            this.pagos.Clear();
-            this.deudas.Clear();
+            this.total_registros = 0;
         }
 
         public static void SepararNombreCompleto(string completo, out string nom, out string ape)
@@ -274,43 +295,51 @@ namespace SIGEP_App
             else
             {
                 this.limpiar_arreglos();
-                List<string[]> filas = LeerTodoCsv(this.archivo);
+                string[][] filas = LeerTodoCsv(this.archivo);
                 bool migrarFormatoAntiguo = false;
 
-                for (int i = 1; i < filas.Count; i++)
+                for (int i = 1; i < filas.Length; i++)
                 {
+                    if (this.total_registros >= MAX_REGISTROS)
+                    {
+                        break;
+                    }
+
                     string[] fila = filas[i];
                     if (fila.Length == 21)
                     {
-                        this.origenes.Add(A_MayusculasConTildes(fila[0]));
-                        this.dnis_prin.Add(fila[1].Trim());
-                        this.nombres.Add(A_MayusculasConTildes(fila[2]));
-                        this.apellidos.Add(A_MayusculasConTildes(fila[3]));
-                        this.dnis_sec.Add(fila[4].Trim());
-                        this.nombres_sec.Add(A_MayusculasConTildes(fila[5]));
-                        this.apellidos_sec.Add(A_MayusculasConTildes(fila[6]));
-                        this.generos.Add(fila[7].Trim());
+                        int pos = this.total_registros;
+                        this.origenes[pos] = A_MayusculasConTildes(fila[0]);
+                        this.dnis_prin[pos] = fila[1].Trim();
+                        this.nombres[pos] = A_MayusculasConTildes(fila[2]);
+                        this.apellidos[pos] = A_MayusculasConTildes(fila[3]);
+                        this.dnis_sec[pos] = fila[4].Trim();
+                        this.nombres_sec[pos] = A_MayusculasConTildes(fila[5]);
+                        this.apellidos_sec[pos] = A_MayusculasConTildes(fila[6]);
+                        this.generos[pos] = fila[7].Trim();
                         string sac = (fila[8].Trim() == "Matrimonio Regular") ? "Matrimonio" : fila[8].Trim();
-                        this.tipos.Add(sac);
-                        this.estados.Add(fila[9].Trim());
-                        this.tiene_padrinos.Add(fila[10].Trim());
-                        this.estado_padrinos.Add(fila[11].Trim());
-                        this.checks_mem.Add(fila[12].Trim());
-                        this.obs_auto.Add(RestaurarSaltosLinea(fila[13]));
-                        this.obs_adic.Add(RestaurarSaltosLinea(fila[14]));
-                        this.fechas_sac.Add(fila[15].Trim());
-                        this.libros.Add(fila[16].Trim());
-                        this.folios.Add(fila[17].Trim());
-                        this.asientos.Add(fila[18].Trim());
-                        this.pagos.Add(fila[19].Trim());
-                        this.deudas.Add(fila[20].Trim());
+                        this.tipos[pos] = sac;
+                        this.estados[pos] = fila[9].Trim();
+                        this.tiene_padrinos[pos] = fila[10].Trim();
+                        this.estado_padrinos[pos] = fila[11].Trim();
+                        this.checks_mem[pos] = fila[12].Trim();
+                        this.obs_auto[pos] = RestaurarSaltosLinea(fila[13]);
+                        this.obs_adic[pos] = RestaurarSaltosLinea(fila[14]);
+                        this.fechas_sac[pos] = fila[15].Trim();
+                        this.libros[pos] = fila[16].Trim();
+                        this.folios[pos] = fila[17].Trim();
+                        this.asientos[pos] = fila[18].Trim();
+                        this.pagos[pos] = fila[19].Trim();
+                        this.deudas[pos] = fila[20].Trim();
+                        this.total_registros++;
                     }
                     else if (fila.Length == 17)
                     {
                         migrarFormatoAntiguo = true;
+                        int pos = this.total_registros;
                         bool esHist = fila[10].StartsWith("HIST|");
-                        this.origenes.Add(esHist ? "ANTIGUO" : "TRAMITE");
-                        this.dnis_prin.Add(fila[0].Trim());
+                        this.origenes[pos] = esHist ? "ANTIGUO" : "TRAMITE";
+                        this.dnis_prin[pos] = fila[0].Trim();
 
                         string n1, a1, n2, a2;
                         if (esHist)
@@ -328,25 +357,26 @@ namespace SIGEP_App
                         }
 
                         string sac = (fila[6].Trim() == "Matrimonio Regular") ? "Matrimonio" : fila[6].Trim();
-                        this.nombres.Add(n1);
-                        this.apellidos.Add(a1);
-                        this.dnis_sec.Add(sac == "Matrimonio" ? fila[1].Trim() : "---");
-                        this.nombres_sec.Add(sac == "Matrimonio" ? n2 : "---");
-                        this.apellidos_sec.Add(sac == "Matrimonio" ? a2 : "---");
-                        this.generos.Add(fila[5].Trim());
-                        this.tipos.Add(sac);
-                        this.estados.Add(fila[7].Trim());
-                        this.tiene_padrinos.Add("NO");
-                        this.estado_padrinos.Add("---");
-                        this.checks_mem.Add(esHist ? "1-1-1" : fila[10].Replace(",", "-"));
-                        this.obs_auto.Add(RestaurarSaltosLinea(fila[8]));
-                        this.obs_adic.Add(RestaurarSaltosLinea(fila[9]));
-                        this.fechas_sac.Add(fila[11].Trim());
-                        this.libros.Add(fila[12].Trim());
-                        this.folios.Add(fila[13].Trim());
-                        this.asientos.Add(fila[14].Trim());
-                        this.pagos.Add(fila[15].Trim());
-                        this.deudas.Add(fila[16].Trim());
+                        this.nombres[pos] = n1;
+                        this.apellidos[pos] = a1;
+                        this.dnis_sec[pos] = (sac == "Matrimonio") ? fila[1].Trim() : "---";
+                        this.nombres_sec[pos] = (sac == "Matrimonio") ? n2 : "---";
+                        this.apellidos_sec[pos] = (sac == "Matrimonio") ? a2 : "---";
+                        this.generos[pos] = fila[5].Trim();
+                        this.tipos[pos] = sac;
+                        this.estados[pos] = fila[7].Trim();
+                        this.tiene_padrinos[pos] = "NO";
+                        this.estado_padrinos[pos] = "---";
+                        this.checks_mem[pos] = esHist ? "1-1-1" : fila[10].Replace(",", "-");
+                        this.obs_auto[pos] = RestaurarSaltosLinea(fila[8]);
+                        this.obs_adic[pos] = RestaurarSaltosLinea(fila[9]);
+                        this.fechas_sac[pos] = fila[11].Trim();
+                        this.libros[pos] = fila[12].Trim();
+                        this.folios[pos] = fila[13].Trim();
+                        this.asientos[pos] = fila[14].Trim();
+                        this.pagos[pos] = fila[15].Trim();
+                        this.deudas[pos] = fila[16].Trim();
+                        this.total_registros++;
                     }
                 }
 
@@ -361,8 +391,8 @@ namespace SIGEP_App
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("ORIGEN,DNI_TITULAR,NOMBRES_TITULAR,APELLIDOS_TITULAR,DNI_CONYUGE,NOMBRES_CONYUGE,APELLIDOS_CONYUGE,GENERO,SACRAMENTO,ESTADO,TIENE_PADRINOS,ESTADO_CIVIL_PADRINOS,CHECKS,OBS_AUTO,OBS_ADIC,FECHA_SAC,LIBRO,FOLIO,ASIENTO,PAGO,DEUDA");
-            int length = this.dnis_prin.Count;
-            for (int i = 0; i < length; i++)
+
+            for (int i = 0; i < this.total_registros; i++)
             {
                 string linea = string.Join(",", new string[] {
                     EscaparCsv(this.origenes[i]),
@@ -394,27 +424,35 @@ namespace SIGEP_App
 
         public void registrar(string origen, string d1, string nom1, string ape1, string d2, string nom2, string ape2, string gen, string tipo, string est, string t_pad, string est_pad, string chks, string o_auto, string o_adic, string fec, string lib, string fol, string asi, string pag, string deu)
         {
-            this.origenes.Add(A_MayusculasConTildes(origen));
-            this.dnis_prin.Add(d1);
-            this.nombres.Add(A_MayusculasConTildes(nom1));
-            this.apellidos.Add(A_MayusculasConTildes(ape1));
-            this.dnis_sec.Add(d2);
-            this.nombres_sec.Add(A_MayusculasConTildes(nom2));
-            this.apellidos_sec.Add(A_MayusculasConTildes(ape2));
-            this.generos.Add(gen);
-            this.tipos.Add(tipo);
-            this.estados.Add(est);
-            this.tiene_padrinos.Add(t_pad);
-            this.estado_padrinos.Add(est_pad);
-            this.checks_mem.Add(chks);
-            this.obs_auto.Add(o_auto);
-            this.obs_adic.Add(o_adic);
-            this.fechas_sac.Add(fec);
-            this.libros.Add(lib);
-            this.folios.Add(fol);
-            this.asientos.Add(asi);
-            this.pagos.Add(pag);
-            this.deudas.Add(deu);
+            if (this.total_registros >= MAX_REGISTROS)
+            {
+                return;
+            }
+
+            int pos = this.total_registros;
+            this.origenes[pos] = A_MayusculasConTildes(origen);
+            this.dnis_prin[pos] = d1;
+            this.nombres[pos] = A_MayusculasConTildes(nom1);
+            this.apellidos[pos] = A_MayusculasConTildes(ape1);
+            this.dnis_sec[pos] = d2;
+            this.nombres_sec[pos] = A_MayusculasConTildes(nom2);
+            this.apellidos_sec[pos] = A_MayusculasConTildes(ape2);
+            this.generos[pos] = gen;
+            this.tipos[pos] = tipo;
+            this.estados[pos] = est;
+            this.tiene_padrinos[pos] = t_pad;
+            this.estado_padrinos[pos] = est_pad;
+            this.checks_mem[pos] = chks;
+            this.obs_auto[pos] = o_auto;
+            this.obs_adic[pos] = o_adic;
+            this.fechas_sac[pos] = fec;
+            this.libros[pos] = lib;
+            this.folios[pos] = fol;
+            this.asientos[pos] = asi;
+            this.pagos[pos] = pag;
+            this.deudas[pos] = deu;
+
+            this.total_registros++;
             this.guardar_datos();
 
             ApiReniec.LimpiarCache();
@@ -422,6 +460,11 @@ namespace SIGEP_App
 
         public void actualizar_completo(int idx, string d1, string nom1, string ape1, string d2, string nom2, string ape2, string gen, string tipo, string est, string t_pad, string est_pad, string chks, string o_auto, string o_adic, string fec, string lib, string fol, string asi, string pag, string deu)
         {
+            if (idx < 0 || idx >= this.total_registros)
+            {
+                return;
+            }
+
             this.dnis_prin[idx] = d1;
             this.nombres[idx] = A_MayusculasConTildes(nom1);
             this.apellidos[idx] = A_MayusculasConTildes(ape1);
@@ -449,27 +492,38 @@ namespace SIGEP_App
 
         public void eliminar(int idx)
         {
-            this.origenes.RemoveAt(idx);
-            this.dnis_prin.RemoveAt(idx);
-            this.nombres.RemoveAt(idx);
-            this.apellidos.RemoveAt(idx);
-            this.dnis_sec.RemoveAt(idx);
-            this.nombres_sec.RemoveAt(idx);
-            this.apellidos_sec.RemoveAt(idx);
-            this.generos.RemoveAt(idx);
-            this.tipos.RemoveAt(idx);
-            this.estados.RemoveAt(idx);
-            this.tiene_padrinos.RemoveAt(idx);
-            this.estado_padrinos.RemoveAt(idx);
-            this.checks_mem.RemoveAt(idx);
-            this.obs_auto.RemoveAt(idx);
-            this.obs_adic.RemoveAt(idx);
-            this.fechas_sac.RemoveAt(idx);
-            this.libros.RemoveAt(idx);
-            this.folios.RemoveAt(idx);
-            this.asientos.RemoveAt(idx);
-            this.pagos.RemoveAt(idx);
-            this.deudas.RemoveAt(idx);
+            if (idx < 0 || idx >= this.total_registros)
+            {
+                return;
+            }
+
+            // Desplazamiento clásico en arreglos paralelos
+            for (int i = idx; i < this.total_registros - 1; i++)
+            {
+                this.origenes[i] = this.origenes[i + 1];
+                this.dnis_prin[i] = this.dnis_prin[i + 1];
+                this.nombres[i] = this.nombres[i + 1];
+                this.apellidos[i] = this.apellidos[i + 1];
+                this.dnis_sec[i] = this.dnis_sec[i + 1];
+                this.nombres_sec[i] = this.nombres_sec[i + 1];
+                this.apellidos_sec[i] = this.apellidos_sec[i + 1];
+                this.generos[i] = this.generos[i + 1];
+                this.tipos[i] = this.tipos[i + 1];
+                this.estados[i] = this.estados[i + 1];
+                this.tiene_padrinos[i] = this.tiene_padrinos[i + 1];
+                this.estado_padrinos[i] = this.estado_padrinos[i + 1];
+                this.checks_mem[i] = this.checks_mem[i + 1];
+                this.obs_auto[i] = this.obs_auto[i + 1];
+                this.obs_adic[i] = this.obs_adic[i + 1];
+                this.fechas_sac[i] = this.fechas_sac[i + 1];
+                this.libros[i] = this.libros[i + 1];
+                this.folios[i] = this.folios[i + 1];
+                this.asientos[i] = this.asientos[i + 1];
+                this.pagos[i] = this.pagos[i + 1];
+                this.deudas[i] = this.deudas[i + 1];
+            }
+
+            this.total_registros--;
             this.guardar_datos();
         }
 
@@ -484,11 +538,12 @@ namespace SIGEP_App
             return s;
         }
 
-        public List<int> buscar_indices_por_dni(string dni, bool soloTramites = true)
+        public int[] buscar_indices_por_dni(string dni, bool soloTramites = true)
         {
-            List<int> resultados = new List<int>();
-            int length = this.dnis_prin.Count;
-            for (int i = 0; i < length; i++)
+            int[] temp = new int[this.total_registros];
+            int contador = 0;
+
+            for (int i = 0; i < this.total_registros; i++)
             {
                 if (soloTramites && this.origenes[i] == "ANTIGUO")
                 {
@@ -496,27 +551,36 @@ namespace SIGEP_App
                 }
                 if (this.dnis_prin[i] == dni && dni != "SIN DNI" && dni != "---")
                 {
-                    resultados.Add(i);
+                    temp[contador] = i;
+                    contador++;
                 }
                 else if (this.dnis_sec[i] == dni && dni != "" && dni != "---" && dni != "SIN DNI")
                 {
-                    resultados.Add(i);
+                    temp[contador] = i;
+                    contador++;
                 }
+            }
+
+            int[] resultados = new int[contador];
+            for (int j = 0; j < contador; j++)
+            {
+                resultados[j] = temp[j];
             }
             return resultados;
         }
 
-        public List<int> buscar_indices_por_apellidos(string apellidoBuscado, bool soloTramites = true)
+        public int[] buscar_indices_por_apellidos(string apellidoBuscado, bool soloTramites = true)
         {
-            List<int> resultados = new List<int>();
             string busqNorm = NormalizarSinTildes(apellidoBuscado.Trim());
             if (busqNorm == "")
             {
-                return resultados;
+                return new int[0];
             }
 
-            int length = this.apellidos.Count;
-            for (int i = 0; i < length; i++)
+            int[] temp = new int[this.total_registros];
+            int contador = 0;
+
+            for (int i = 0; i < this.total_registros; i++)
             {
                 if (soloTramites && this.origenes[i] == "ANTIGUO")
                 {
@@ -527,8 +591,15 @@ namespace SIGEP_App
 
                 if (ape1Norm.Contains(busqNorm) || (ape2Norm != "---" && ape2Norm.Contains(busqNorm)))
                 {
-                    resultados.Add(i);
+                    temp[contador] = i;
+                    contador++;
                 }
+            }
+
+            int[] resultados = new int[contador];
+            for (int j = 0; j < contador; j++)
+            {
+                resultados[j] = temp[j];
             }
             return resultados;
         }
@@ -574,10 +645,9 @@ namespace SIGEP_App
 
         public void ordenar_bubble_asc()
         {
-            int length = this.apellidos.Count;
-            for (int i = 0; i < length; i++)
+            for (int i = 0; i < this.total_registros - 1; i++)
             {
-                for (int j = 0; j < length - i - 1; j++)
+                for (int j = 0; j < this.total_registros - i - 1; j++)
                 {
                     string clave1 = A_MayusculasConTildes(this.apellidos[j] + " " + this.nombres[j]);
                     string clave2 = A_MayusculasConTildes(this.apellidos[j + 1] + " " + this.nombres[j + 1]);
@@ -592,11 +662,10 @@ namespace SIGEP_App
 
         public void ordenar_selection_desc()
         {
-            int length = this.apellidos.Count;
-            for (int i = 0; i < length; i++)
+            for (int i = 0; i < this.total_registros; i++)
             {
                 int min_pos = i;
-                for (int j = i + 1; j < length; j++)
+                for (int j = i + 1; j < this.total_registros; j++)
                 {
                     string claveJ = A_MayusculasConTildes(this.apellidos[j] + " " + this.nombres[j]);
                     string claveMin = A_MayusculasConTildes(this.apellidos[min_pos] + " " + this.nombres[min_pos]);
@@ -616,13 +685,27 @@ namespace SIGEP_App
 
     public static class ApiReniec
     {
-        private static Dictionary<string, string> cacheNombres = new Dictionary<string, string>();
-        private static Dictionary<string, string> cacheApellidos = new Dictionary<string, string>();
+        // Caché temporal implementado con arreglos paralelos puros
+        private static string[] cacheDnis = new string[200];
+        private static string[] cacheNombres = new string[200];
+        private static string[] cacheApellidos = new string[200];
+        private static int totalCache = 0;
 
         public static void LimpiarCache()
         {
-            cacheNombres.Clear();
-            cacheApellidos.Clear();
+            totalCache = 0;
+        }
+
+        private static int BuscarEnCache(string dni)
+        {
+            for (int i = 0; i < totalCache; i++)
+            {
+                if (cacheDnis[i] == dni)
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
 
         private static string DecodificarTextoJson(string raw)
@@ -651,10 +734,11 @@ namespace SIGEP_App
                 return false;
             }
 
-            if (cacheNombres.ContainsKey(dni))
+            int posCache = BuscarEnCache(dni);
+            if (posCache != -1)
             {
-                nombres = cacheNombres[dni];
-                apellidos = cacheApellidos[dni];
+                nombres = cacheNombres[posCache];
+                apellidos = cacheApellidos[posCache];
                 return true;
             }
 
@@ -689,8 +773,13 @@ namespace SIGEP_App
                                     string mat = mMat.Success ? DecodificarTextoJson(mMat.Groups[1].Value) : "";
                                     apellidos = BaseDatos.A_MayusculasConTildes(pat + " " + mat);
 
-                                    cacheNombres[dni] = nombres;
-                                    cacheApellidos[dni] = apellidos;
+                                    if (totalCache < cacheDnis.Length)
+                                    {
+                                        cacheDnis[totalCache] = dni;
+                                        cacheNombres[totalCache] = nombres;
+                                        cacheApellidos[totalCache] = apellidos;
+                                        totalCache++;
+                                    }
                                     return true;
                                 }
                             }
