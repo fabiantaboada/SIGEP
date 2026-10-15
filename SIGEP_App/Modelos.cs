@@ -52,39 +52,112 @@ namespace SIGEP_App
 
     public class BaseDatos
     {
-        public const int MAX_REGISTROS = 5000;
         public string archivo;
         private static readonly CultureInfo CulturaEs = new CultureInfo("es-PE");
 
-        // Arreglos paralelos unidimensionales puros (21 columnas)
-        public string[] origenes = new string[MAX_REGISTROS];
-        public string[] dnis_prin = new string[MAX_REGISTROS];
-        public string[] nombres = new string[MAX_REGISTROS];
-        public string[] apellidos = new string[MAX_REGISTROS];
-        public string[] dnis_sec = new string[MAX_REGISTROS];
-        public string[] nombres_sec = new string[MAX_REGISTROS];
-        public string[] apellidos_sec = new string[MAX_REGISTROS];
-        public string[] generos = new string[MAX_REGISTROS];
-        public string[] tipos = new string[MAX_REGISTROS];
-        public string[] estados = new string[MAX_REGISTROS];
-        public string[] tiene_padrinos = new string[MAX_REGISTROS];
-        public string[] estado_padrinos = new string[MAX_REGISTROS];
-        public string[] checks_mem = new string[MAX_REGISTROS];
-        public string[] obs_auto = new string[MAX_REGISTROS];
-        public string[] obs_adic = new string[MAX_REGISTROS];
-        public string[] fechas_sac = new string[MAX_REGISTROS];
-        public string[] libros = new string[MAX_REGISTROS];
-        public string[] folios = new string[MAX_REGISTROS];
-        public string[] asientos = new string[MAX_REGISTROS];
-        public string[] pagos = new string[MAX_REGISTROS];
-        public string[] deudas = new string[MAX_REGISTROS];
-
+        // Capacidad inicial pequeña que crece automáticamente de forma ilimitada
+        private int capacidad = 10;
         public int total_registros = 0;
+
+        // 21 Arreglos paralelos unidimensionales puros
+        public string[] origenes;
+        public string[] dnis_prin;
+        public string[] nombres;
+        public string[] apellidos;
+        public string[] dnis_sec;
+        public string[] nombres_sec;
+        public string[] apellidos_sec;
+        public string[] generos;
+        public string[] tipos;
+        public string[] estados;
+        public string[] tiene_padrinos;
+        public string[] estado_padrinos;
+        public string[] checks_mem;
+        public string[] obs_auto;
+        public string[] obs_adic;
+        public string[] fechas_sac;
+        public string[] libros;
+        public string[] folios;
+        public string[] asientos;
+        public string[] pagos;
+        public string[] deudas;
 
         public BaseDatos()
         {
+            this.InicializarArreglos(10);
             this.archivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "registros_sigep.csv");
             this.cargar_datos();
+        }
+
+        private void InicializarArreglos(int capInicial)
+        {
+            this.capacidad = capInicial;
+            this.total_registros = 0;
+
+            this.origenes = new string[this.capacidad];
+            this.dnis_prin = new string[this.capacidad];
+            this.nombres = new string[this.capacidad];
+            this.apellidos = new string[this.capacidad];
+            this.dnis_sec = new string[this.capacidad];
+            this.nombres_sec = new string[this.capacidad];
+            this.apellidos_sec = new string[this.capacidad];
+            this.generos = new string[this.capacidad];
+            this.tipos = new string[this.capacidad];
+            this.estados = new string[this.capacidad];
+            this.tiene_padrinos = new string[this.capacidad];
+            this.estado_padrinos = new string[this.capacidad];
+            this.checks_mem = new string[this.capacidad];
+            this.obs_auto = new string[this.capacidad];
+            this.obs_adic = new string[this.capacidad];
+            this.fechas_sac = new string[this.capacidad];
+            this.libros = new string[this.capacidad];
+            this.folios = new string[this.capacidad];
+            this.asientos = new string[this.capacidad];
+            this.pagos = new string[this.capacidad];
+            this.deudas = new string[this.capacidad];
+        }
+
+        // Copia un arreglo a uno nuevo de mayor capacidad usando algoritmia clásica
+        private static string[] AmpliarArregloTexto(string[] original, int cantidadActual, int nuevaCapacidad)
+        {
+            string[] nuevo = new string[nuevaCapacidad];
+            for (int i = 0; i < cantidadActual; i++)
+            {
+                nuevo[i] = original[i];
+            }
+            return nuevo;
+        }
+
+        // Duplica la capacidad de los 21 arreglos paralelos cuando se llenan (sin límite máximo)
+        private void AsegurarCapacidad()
+        {
+            if (this.total_registros >= this.capacidad)
+            {
+                int nuevaCap = this.capacidad * 2;
+                this.origenes = AmpliarArregloTexto(this.origenes, this.total_registros, nuevaCap);
+                this.dnis_prin = AmpliarArregloTexto(this.dnis_prin, this.total_registros, nuevaCap);
+                this.nombres = AmpliarArregloTexto(this.nombres, this.total_registros, nuevaCap);
+                this.apellidos = AmpliarArregloTexto(this.apellidos, this.total_registros, nuevaCap);
+                this.dnis_sec = AmpliarArregloTexto(this.dnis_sec, this.total_registros, nuevaCap);
+                this.nombres_sec = AmpliarArregloTexto(this.nombres_sec, this.total_registros, nuevaCap);
+                this.apellidos_sec = AmpliarArregloTexto(this.apellidos_sec, this.total_registros, nuevaCap);
+                this.generos = AmpliarArregloTexto(this.generos, this.total_registros, nuevaCap);
+                this.tipos = AmpliarArregloTexto(this.tipos, this.total_registros, nuevaCap);
+                this.estados = AmpliarArregloTexto(this.estados, this.total_registros, nuevaCap);
+                this.tiene_padrinos = AmpliarArregloTexto(this.tiene_padrinos, this.total_registros, nuevaCap);
+                this.estado_padrinos = AmpliarArregloTexto(this.estado_padrinos, this.total_registros, nuevaCap);
+                this.checks_mem = AmpliarArregloTexto(this.checks_mem, this.total_registros, nuevaCap);
+                this.obs_auto = AmpliarArregloTexto(this.obs_auto, this.total_registros, nuevaCap);
+                this.obs_adic = AmpliarArregloTexto(this.obs_adic, this.total_registros, nuevaCap);
+                this.fechas_sac = AmpliarArregloTexto(this.fechas_sac, this.total_registros, nuevaCap);
+                this.libros = AmpliarArregloTexto(this.libros, this.total_registros, nuevaCap);
+                this.folios = AmpliarArregloTexto(this.folios, this.total_registros, nuevaCap);
+                this.asientos = AmpliarArregloTexto(this.asientos, this.total_registros, nuevaCap);
+                this.pagos = AmpliarArregloTexto(this.pagos, this.total_registros, nuevaCap);
+                this.deudas = AmpliarArregloTexto(this.deudas, this.total_registros, nuevaCap);
+
+                this.capacidad = nuevaCap;
+            }
         }
 
         public static string A_MayusculasConTildes(string texto)
@@ -134,9 +207,20 @@ namespace SIGEP_App
             return v;
         }
 
+        private static string[][] AmpliarMatrizFilas(string[][] original, int cantidadActual, int nuevaCapacidad)
+        {
+            string[][] nueva = new string[nuevaCapacidad][];
+            for (int i = 0; i < cantidadActual; i++)
+            {
+                nueva[i] = original[i];
+            }
+            return nueva;
+        }
+
         public static string[][] LeerTodoCsv(string ruta)
         {
-            string[][] filasTemp = new string[MAX_REGISTROS + 10][];
+            int capFilas = 16;
+            string[][] filasTemp = new string[capFilas][];
             int totalFilas = 0;
 
             string contenido = File.ReadAllText(ruta, Encoding.UTF8);
@@ -175,11 +259,12 @@ namespace SIGEP_App
                     }
                     else if (c == ',')
                     {
-                        if (colActual < filaActual.Length)
+                        if (colActual >= filaActual.Length)
                         {
-                            filaActual[colActual] = celdaActual.ToString();
-                            colActual++;
+                            filaActual = AmpliarArregloTexto(filaActual, colActual, filaActual.Length * 2);
                         }
+                        filaActual[colActual] = celdaActual.ToString();
+                        colActual++;
                         celdaActual.Clear();
                     }
                     else if (c == '\r')
@@ -188,11 +273,12 @@ namespace SIGEP_App
                     }
                     else if (c == '\n')
                     {
-                        if (colActual < filaActual.Length)
+                        if (colActual >= filaActual.Length)
                         {
-                            filaActual[colActual] = celdaActual.ToString();
-                            colActual++;
+                            filaActual = AmpliarArregloTexto(filaActual, colActual, filaActual.Length * 2);
                         }
+                        filaActual[colActual] = celdaActual.ToString();
+                        colActual++;
                         celdaActual.Clear();
 
                         if (colActual > 1 || (colActual == 1 && filaActual[0].Trim() != ""))
@@ -202,11 +288,13 @@ namespace SIGEP_App
                             {
                                 filaDefinitiva[k] = filaActual[k];
                             }
-                            if (totalFilas < filasTemp.Length)
+                            if (totalFilas >= capFilas)
                             {
-                                filasTemp[totalFilas] = filaDefinitiva;
-                                totalFilas++;
+                                capFilas = capFilas * 2;
+                                filasTemp = AmpliarMatrizFilas(filasTemp, totalFilas, capFilas);
                             }
+                            filasTemp[totalFilas] = filaDefinitiva;
+                            totalFilas++;
                         }
                         colActual = 0;
                     }
@@ -219,11 +307,13 @@ namespace SIGEP_App
 
             if (celdaActual.Length > 0 || colActual > 0)
             {
-                if (colActual < filaActual.Length)
+                if (colActual >= filaActual.Length)
                 {
-                    filaActual[colActual] = celdaActual.ToString();
-                    colActual++;
+                    filaActual = AmpliarArregloTexto(filaActual, colActual, filaActual.Length * 2);
                 }
+                filaActual[colActual] = celdaActual.ToString();
+                colActual++;
+
                 if (colActual > 1 || (colActual == 1 && filaActual[0].Trim() != ""))
                 {
                     string[] filaDefinitiva = new string[colActual];
@@ -231,11 +321,13 @@ namespace SIGEP_App
                     {
                         filaDefinitiva[k] = filaActual[k];
                     }
-                    if (totalFilas < filasTemp.Length)
+                    if (totalFilas >= capFilas)
                     {
-                        filasTemp[totalFilas] = filaDefinitiva;
-                        totalFilas++;
+                        capFilas = capFilas * 2;
+                        filasTemp = AmpliarMatrizFilas(filasTemp, totalFilas, capFilas);
                     }
+                    filasTemp[totalFilas] = filaDefinitiva;
+                    totalFilas++;
                 }
             }
 
@@ -255,7 +347,7 @@ namespace SIGEP_App
 
         public void limpiar_arreglos()
         {
-            this.total_registros = 0;
+            this.InicializarArreglos(10);
         }
 
         public static void SepararNombreCompleto(string completo, out string nom, out string ape)
@@ -300,14 +392,10 @@ namespace SIGEP_App
 
                 for (int i = 1; i < filas.Length; i++)
                 {
-                    if (this.total_registros >= MAX_REGISTROS)
-                    {
-                        break;
-                    }
-
                     string[] fila = filas[i];
                     if (fila.Length == 21)
                     {
+                        this.AsegurarCapacidad();
                         int pos = this.total_registros;
                         this.origenes[pos] = A_MayusculasConTildes(fila[0]);
                         this.dnis_prin[pos] = fila[1].Trim();
@@ -336,6 +424,7 @@ namespace SIGEP_App
                     else if (fila.Length == 17)
                     {
                         migrarFormatoAntiguo = true;
+                        this.AsegurarCapacidad();
                         int pos = this.total_registros;
                         bool esHist = fila[10].StartsWith("HIST|");
                         this.origenes[pos] = esHist ? "ANTIGUO" : "TRAMITE";
@@ -424,10 +513,8 @@ namespace SIGEP_App
 
         public void registrar(string origen, string d1, string nom1, string ape1, string d2, string nom2, string ape2, string gen, string tipo, string est, string t_pad, string est_pad, string chks, string o_auto, string o_adic, string fec, string lib, string fol, string asi, string pag, string deu)
         {
-            if (this.total_registros >= MAX_REGISTROS)
-            {
-                return;
-            }
+            // Si el arreglo se llenó, duplica su capacidad automáticamente antes de insertar
+            this.AsegurarCapacidad();
 
             int pos = this.total_registros;
             this.origenes[pos] = A_MayusculasConTildes(origen);
@@ -497,7 +584,6 @@ namespace SIGEP_App
                 return;
             }
 
-            // Desplazamiento clásico en arreglos paralelos
             for (int i = idx; i < this.total_registros - 1; i++)
             {
                 this.origenes[i] = this.origenes[i + 1];
@@ -685,15 +771,43 @@ namespace SIGEP_App
 
     public static class ApiReniec
     {
-        // Caché temporal implementado con arreglos paralelos puros
-        private static string[] cacheDnis = new string[200];
-        private static string[] cacheNombres = new string[200];
-        private static string[] cacheApellidos = new string[200];
+        // Caché temporal con arreglos paralelos dinámicos (se vacía al guardar el expediente)
+        private static int capCache = 10;
+        private static string[] cacheDnis = new string[10];
+        private static string[] cacheNombres = new string[10];
+        private static string[] cacheApellidos = new string[10];
         private static int totalCache = 0;
 
         public static void LimpiarCache()
         {
+            capCache = 10;
+            cacheDnis = new string[10];
+            cacheNombres = new string[10];
+            cacheApellidos = new string[10];
             totalCache = 0;
+        }
+
+        private static void AsegurarCapacidadCache()
+        {
+            if (totalCache >= capCache)
+            {
+                int nuevaCap = capCache * 2;
+                string[] nuevoDnis = new string[nuevaCap];
+                string[] nuevoNoms = new string[nuevaCap];
+                string[] nuevoApes = new string[nuevaCap];
+
+                for (int i = 0; i < totalCache; i++)
+                {
+                    nuevoDnis[i] = cacheDnis[i];
+                    nuevoNoms[i] = cacheNombres[i];
+                    nuevoApes[i] = cacheApellidos[i];
+                }
+
+                cacheDnis = nuevoDnis;
+                cacheNombres = nuevoNoms;
+                cacheApellidos = nuevoApes;
+                capCache = nuevaCap;
+            }
         }
 
         private static int BuscarEnCache(string dni)
@@ -773,13 +887,11 @@ namespace SIGEP_App
                                     string mat = mMat.Success ? DecodificarTextoJson(mMat.Groups[1].Value) : "";
                                     apellidos = BaseDatos.A_MayusculasConTildes(pat + " " + mat);
 
-                                    if (totalCache < cacheDnis.Length)
-                                    {
-                                        cacheDnis[totalCache] = dni;
-                                        cacheNombres[totalCache] = nombres;
-                                        cacheApellidos[totalCache] = apellidos;
-                                        totalCache++;
-                                    }
+                                    AsegurarCapacidadCache();
+                                    cacheDnis[totalCache] = dni;
+                                    cacheNombres[totalCache] = nombres;
+                                    cacheApellidos[totalCache] = apellidos;
+                                    totalCache++;
                                     return true;
                                 }
                             }
