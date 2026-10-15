@@ -16,6 +16,11 @@ namespace SIGEP_App
             this.guiaCampos.SetToolTip(caja, texto);
         }
 
+        private Font FuentePx(float tamanoPx, FontStyle estilo = FontStyle.Regular)
+        {
+            return new Font("Segoe UI", tamanoPx, estilo, GraphicsUnit.Pixel);
+        }
+
         private BaseDatos db;
         private ControladorLogica logica;
         private Configuracion config;
@@ -39,21 +44,23 @@ namespace SIGEP_App
         private CheckBox[] chks_edit = new CheckBox[9];
         private int reqs_activos_edit = 0;
 
-        // Arreglos paralelos para pintar bordes de validación
-        private Control[] controlesBorde = new Control[300];
-        private Color[] coloresBorde = new Color[300];
+        // Arreglos paralelos dinámicos para pintar bordes de validación
+        private int capBordes = 60;
+        private Control[] controlesBorde = new Control[60];
+        private Color[] coloresBorde = new Color[60];
         private int totalControlesBorde = 0;
 
-        private Control[] panelesConPaint = new Control[60];
+        private Control[] panelesConPaint = new Control[30];
         private int totalPanelesPaint = 0;
 
         public FormMain()
         {
+            this.AutoScaleMode = AutoScaleMode.None;
             this.Text = "SIGEP Workspace - Sistema de Gestión Parroquial";
-            this.MinimumSize = new Size(1080, 740);
+            this.MinimumSize = new Size(960, 640);
             this.WindowState = FormWindowState.Maximized;
             this.BackColor = ColorTranslator.FromHtml("#f8fafc");
-            this.Font = new Font("Segoe UI", 10f, FontStyle.Regular);
+            this.Font = FuentePx(13.5f, FontStyle.Regular);
 
             this.ruta_assets = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
             if (!Directory.Exists(this.ruta_assets))
@@ -82,7 +89,7 @@ namespace SIGEP_App
             this.mostrar_login();
         }
 
-        private Button CrearBotonAccion(string texto, Color colorFondo, Point ubicacion, Size tamano, float tamFuente = 10f)
+        private Button CrearBotonAccion(string texto, Color colorFondo, Point ubicacion, Size tamano, float tamFuentePx = 14f)
         {
             Button btn = new Button();
             btn.Text = texto;
@@ -93,10 +100,68 @@ namespace SIGEP_App
             btn.FlatAppearance.BorderSize = 0;
             btn.BackColor = colorFondo;
             btn.ForeColor = Color.White;
-            btn.Font = new Font("Segoe UI", tamFuente, FontStyle.Bold);
+            btn.Font = FuentePx(tamFuentePx, FontStyle.Bold);
             btn.TextAlign = ContentAlignment.MiddleCenter;
             btn.Cursor = Cursors.Hand;
             return btn;
+        }
+
+        private void ConfigurarTablaResponsiva(DataGridView tabla)
+        {
+            tabla.BackgroundColor = Color.White;
+            tabla.BorderStyle = BorderStyle.FixedSingle;
+            tabla.AllowUserToAddRows = false;
+            tabla.AllowUserToResizeRows = false;
+            tabla.ReadOnly = true;
+            tabla.RowHeadersVisible = false;
+            tabla.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            tabla.MultiSelect = false;
+            tabla.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            tabla.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            tabla.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            tabla.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            tabla.DefaultCellStyle.Font = FuentePx(13f, FontStyle.Regular);
+            tabla.DefaultCellStyle.Padding = new Padding(5, 5, 5, 5);
+            tabla.ColumnHeadersDefaultCellStyle.Font = FuentePx(13.5f, FontStyle.Bold);
+            tabla.ColumnHeadersDefaultCellStyle.Padding = new Padding(5, 6, 5, 6);
+            tabla.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            tabla.RowTemplate.MinimumHeight = 32;
+        }
+
+        private void DistribuirFilaPersona(Panel panelContenedor, int topY, bool mostrarDni, Label lblDni, TextBox txtDni, Label lblNom, TextBox txtNom, Label lblApe, TextBox txtApe)
+        {
+            int margenIzq = 25;
+            int margenDer = 25;
+            int xActual = margenIzq;
+
+            if (mostrarDni && lblDni != null && txtDni != null)
+            {
+                lblDni.Location = new Point(xActual, topY + 4);
+                xActual = lblDni.Right + 8;
+
+                txtDni.Location = new Point(xActual, topY);
+                txtDni.Size = new Size(105, 27);
+                xActual = txtDni.Right + 18;
+            }
+
+            lblNom.Location = new Point(xActual, topY + 4);
+            xActual = lblNom.Right + 8;
+
+            int anchoRestante = Math.Max(260, panelContenedor.ClientSize.Width - xActual - margenDer);
+            int anchoEtiquetaApe = lblApe.PreferredWidth + 24;
+            int anchoCajas = Math.Max(180, anchoRestante - anchoEtiquetaApe);
+            int anchoNom = (int)(anchoCajas * 0.48);
+            int anchoApe = anchoCajas - anchoNom;
+
+            txtNom.Location = new Point(xActual, topY);
+            txtNom.Size = new Size(anchoNom, 27);
+            xActual = txtNom.Right + 16;
+
+            lblApe.Location = new Point(xActual, topY + 4);
+            xActual = lblApe.Right + 8;
+
+            txtApe.Location = new Point(xActual, topY);
+            txtApe.Size = new Size(Math.Max(90, anchoApe), 27);
         }
 
         private string ObtenerEtiquetaDniPorSacramento(string sacramento)
@@ -140,7 +205,7 @@ namespace SIGEP_App
             this.menuPrincipal = new MenuStrip();
             this.menuPrincipal.BackColor = Color.White;
             this.menuPrincipal.ForeColor = ColorTranslator.FromHtml("#0f172a");
-            this.menuPrincipal.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            this.menuPrincipal.Font = FuentePx(13f, FontStyle.Regular);
             this.menuPrincipal.Padding = new Padding(8, 4, 0, 4);
 
             ToolStripMenuItem menuArchivo = new ToolStripMenuItem("Archivo");
@@ -200,14 +265,15 @@ namespace SIGEP_App
         private void MostrarVentanaAcercaDe()
         {
             Form ventanaAcerca = new Form();
+            ventanaAcerca.AutoScaleMode = AutoScaleMode.None;
             ventanaAcerca.Text = "Acerca de SIGEP";
-            ventanaAcerca.Size = new Size(525, 390);
+            ventanaAcerca.Size = new Size(535, 400);
             ventanaAcerca.FormBorderStyle = FormBorderStyle.FixedDialog;
             ventanaAcerca.StartPosition = FormStartPosition.CenterParent;
             ventanaAcerca.MaximizeBox = false;
             ventanaAcerca.MinimizeBox = false;
             ventanaAcerca.BackColor = ColorTranslator.FromHtml("#f0f0f0");
-            ventanaAcerca.Font = new Font("Segoe UI", 9f, FontStyle.Regular);
+            ventanaAcerca.Font = FuentePx(12.5f, FontStyle.Regular);
 
             PictureBox pbBanner = new PictureBox();
             pbBanner.Location = new Point(18, 16);
@@ -232,13 +298,13 @@ namespace SIGEP_App
                     e.Graphics.FillRectangle(fondoLogo, 224, 0, 86, 86);
                 }
 
-                using (Font fBanner = new Font("Segoe UI", 22f, FontStyle.Bold | FontStyle.Italic))
+                using (Font fBanner = FuentePx(28f, FontStyle.Bold | FontStyle.Italic))
                 using (SolidBrush textoBrush = new SolidBrush(Color.White))
                 {
                     e.Graphics.DrawString("SIGEP", fBanner, textoBrush, new PointF(14, 15));
                 }
 
-                using (Font fSub = new Font("Segoe UI", 8.5f, FontStyle.Regular))
+                using (Font fSub = FuentePx(11.5f, FontStyle.Regular))
                 using (SolidBrush subBrush = new SolidBrush(ColorTranslator.FromHtml("#cbd5e1")))
                 {
                     e.Graphics.DrawString("Sistema de Gestión Parroquial", fSub, subBrush, new PointF(16, 56));
@@ -266,65 +332,21 @@ namespace SIGEP_App
             }
             ventanaAcerca.Controls.Add(pbIconoParroquia);
 
-            Label lblVersion = new Label();
-            lblVersion.Text = "SIGEP 1.0 (64-bit)";
-            lblVersion.Location = new Point(98, 118);
-            lblVersion.AutoSize = true;
-            ventanaAcerca.Controls.Add(lblVersion);
+            Label lblVersion = new Label() { Text = "SIGEP 1.0 (64-bit)", Location = new Point(98, 118), AutoSize = true };
+            Label lblCopy = new Label() { Text = "Copyright © 2026 por\nEquipo de Desarrollo SIGEP", Location = new Point(98, 142), AutoSize = true };
+            Label lblPublicado = new Label() { Text = "Publicado para Parroquia San José", Location = new Point(98, 188), AutoSize = true };
+            Label lblSede = new Label() { Text = "Sede Institucional:\nBellavista, Diócesis del Callao", Location = new Point(98, 220), AutoSize = true };
 
-            Label lblCopy = new Label();
-            lblCopy.Text = "Copyright © 2026 por\nEquipo de Desarrollo SIGEP";
-            lblCopy.Location = new Point(98, 142);
-            lblCopy.Size = new Size(230, 38);
-            ventanaAcerca.Controls.Add(lblCopy);
+            Panel linea1 = new Panel() { Location = new Point(98, 272), Size = new Size(230, 1), BackColor = ColorTranslator.FromHtml("#b4b4b4") };
+            Label lblLicenciaEstado = new Label() { Text = "Licencia de uso institucional activa", Location = new Point(98, 282), AutoSize = true };
+            Panel linea2 = new Panel() { Location = new Point(98, 326), Size = new Size(230, 1), BackColor = ColorTranslator.FromHtml("#b4b4b4") };
 
-            Label lblPublicado = new Label();
-            lblPublicado.Text = "Publicado para Parroquia San José";
-            lblPublicado.Location = new Point(98, 184);
-            lblPublicado.AutoSize = true;
-            ventanaAcerca.Controls.Add(lblPublicado);
+            ventanaAcerca.Controls.AddRange(new Control[] { lblVersion, lblCopy, lblPublicado, lblSede, linea1, lblLicenciaEstado, linea2 });
 
-            Label lblSede = new Label();
-            lblSede.Text = "Sede Institucional:\nBellavista, Diócesis del Callao";
-            lblSede.Location = new Point(98, 218);
-            lblSede.Size = new Size(230, 38);
-            ventanaAcerca.Controls.Add(lblSede);
-
-            Panel linea1 = new Panel();
-            linea1.Location = new Point(98, 270);
-            linea1.Size = new Size(230, 1);
-            linea1.BackColor = ColorTranslator.FromHtml("#b4b4b4");
-            ventanaAcerca.Controls.Add(linea1);
-
-            Label lblLicenciaEstado = new Label();
-            lblLicenciaEstado.Text = "Licencia de uso institucional activa";
-            lblLicenciaEstado.Location = new Point(98, 280);
-            lblLicenciaEstado.AutoSize = true;
-            ventanaAcerca.Controls.Add(lblLicenciaEstado);
-
-            Panel linea2 = new Panel();
-            linea2.Location = new Point(98, 326);
-            linea2.Size = new Size(230, 1);
-            linea2.BackColor = ColorTranslator.FromHtml("#b4b4b4");
-            ventanaAcerca.Controls.Add(linea2);
-
-            Button btnAceptar = new Button();
-            btnAceptar.Text = "Aceptar";
-            btnAceptar.Location = new Point(352, 16);
-            btnAceptar.Size = new Size(140, 28);
-            btnAceptar.BackColor = Color.White;
-            btnAceptar.ForeColor = Color.Black;
-            btnAceptar.FlatStyle = FlatStyle.Standard;
+            Button btnAceptar = new Button() { Text = "Aceptar", Location = new Point(352, 16), Size = new Size(145, 30), BackColor = Color.White, ForeColor = Color.Black, FlatStyle = FlatStyle.Standard };
             btnAceptar.Click += (s, e) => ventanaAcerca.Close();
-            ventanaAcerca.Controls.Add(btnAceptar);
 
-            Button btnLicencia = new Button();
-            btnLicencia.Text = "Licencia";
-            btnLicencia.Location = new Point(352, 52);
-            btnLicencia.Size = new Size(140, 28);
-            btnLicencia.BackColor = Color.White;
-            btnLicencia.ForeColor = Color.Black;
-            btnLicencia.FlatStyle = FlatStyle.Standard;
+            Button btnLicencia = new Button() { Text = "Licencia", Location = new Point(352, 54), Size = new Size(145, 30), BackColor = Color.White, ForeColor = Color.Black, FlatStyle = FlatStyle.Standard };
             btnLicencia.Click += (s, e) =>
             {
                 MessageBox.Show(
@@ -335,15 +357,8 @@ namespace SIGEP_App
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
             };
-            ventanaAcerca.Controls.Add(btnLicencia);
 
-            Button btnContacto = new Button();
-            btnContacto.Text = "Contacto";
-            btnContacto.Location = new Point(352, 88);
-            btnContacto.Size = new Size(140, 28);
-            btnContacto.BackColor = Color.White;
-            btnContacto.ForeColor = Color.Black;
-            btnContacto.FlatStyle = FlatStyle.Standard;
+            Button btnContacto = new Button() { Text = "Contacto", Location = new Point(352, 92), Size = new Size(145, 30), BackColor = Color.White, ForeColor = Color.Black, FlatStyle = FlatStyle.Standard };
             btnContacto.Click += (s, e) =>
             {
                 MessageBox.Show(
@@ -357,8 +372,8 @@ namespace SIGEP_App
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
             };
-            ventanaAcerca.Controls.Add(btnContacto);
 
+            ventanaAcerca.Controls.AddRange(new Control[] { btnAceptar, btnLicencia, btnContacto });
             ventanaAcerca.AcceptButton = btnAceptar;
             ventanaAcerca.ShowDialog(this);
         }
@@ -377,7 +392,25 @@ namespace SIGEP_App
             this.totalPanelesPaint = 0;
         }
 
-        // ================= MOTOR DE BORDES CON ARREGLOS PARALELOS =================
+        // ================= MOTOR DE BORDES CON ARREGLOS PARALELOS DINÁMICOS =================
+        private void AsegurarCapacidadBordes()
+        {
+            if (this.totalControlesBorde >= this.capBordes)
+            {
+                int nuevaCap = this.capBordes * 2;
+                Control[] nuevoCtrl = new Control[nuevaCap];
+                Color[] nuevoCol = new Color[nuevaCap];
+                for (int i = 0; i < this.totalControlesBorde; i++)
+                {
+                    nuevoCtrl[i] = this.controlesBorde[i];
+                    nuevoCol[i] = this.coloresBorde[i];
+                }
+                this.controlesBorde = nuevoCtrl;
+                this.coloresBorde = nuevoCol;
+                this.capBordes = nuevaCap;
+            }
+        }
+
         private int BuscarIndiceControlBorde(Control ctrl)
         {
             for (int i = 0; i < this.totalControlesBorde; i++)
@@ -409,8 +442,9 @@ namespace SIGEP_App
             {
                 this.coloresBorde[pos] = color;
             }
-            else if (this.totalControlesBorde < this.controlesBorde.Length)
+            else
             {
+                this.AsegurarCapacidadBordes();
                 this.controlesBorde[this.totalControlesBorde] = ctrl;
                 this.coloresBorde[this.totalControlesBorde] = color;
                 this.totalControlesBorde++;
@@ -458,8 +492,25 @@ namespace SIGEP_App
         private void adjuntar_validacion(TextBox entry_widget, string tipo)
         {
             entry_widget.BorderStyle = BorderStyle.FixedSingle;
+            entry_widget.Font = FuentePx(13.5f, FontStyle.Regular);
 
             entry_widget.VisibleChanged += (s, e) =>
+            {
+                if (entry_widget.Parent != null)
+                {
+                    entry_widget.Parent.Invalidate();
+                }
+            };
+
+            entry_widget.SizeChanged += (s, e) =>
+            {
+                if (entry_widget.Parent != null)
+                {
+                    entry_widget.Parent.Invalidate();
+                }
+            };
+
+            entry_widget.LocationChanged += (s, e) =>
             {
                 if (entry_widget.Parent != null)
                 {
@@ -815,11 +866,7 @@ namespace SIGEP_App
                 return false;
             }
             string soloLetras = Regex.Replace(BaseDatos.A_MayusculasConTildes(nombre), @"[^A-ZÁÉÍÓÚÑÜ]", "");
-            if (soloLetras.Length < 2)
-            {
-                return false;
-            }
-            return true;
+            return soloLetras.Length >= 2;
         }
 
         private bool EsNumeroPositivoValido(string texto)
@@ -829,11 +876,7 @@ namespace SIGEP_App
                 return false;
             }
             int num = 0;
-            if (int.TryParse(texto.Trim(), out num) && num > 0)
-            {
-                return true;
-            }
-            return false;
+            return int.TryParse(texto.Trim(), out num) && num > 0;
         }
 
         private string[] ObtenerRequisitosSacramento(string sacramento, bool tienePadrinos, string estadoCivilPadrinos)
@@ -850,14 +893,9 @@ namespace SIGEP_App
                 if (tienePadrinos)
                 {
                     temp[cant++] = "5. Copia DNI Padrino / Madrina";
-                    if (estadoCivilPadrinos == "Casado(a)")
-                    {
-                        temp[cant++] = "6. Partida Matrimonio Religioso Padrinos";
-                    }
-                    else
-                    {
-                        temp[cant++] = "6. Constancia Confirmación Padrino/Madrina";
-                    }
+                    temp[cant++] = (estadoCivilPadrinos == "Casado(a)")
+                        ? "6. Partida Matrimonio Religioso Padrinos"
+                        : "6. Constancia Confirmación Padrino/Madrina";
                 }
             }
             else if (sacramento == "Primera Comunión")
@@ -879,14 +917,9 @@ namespace SIGEP_App
                 if (tienePadrinos)
                 {
                     temp[cant++] = "4. Copia DNI Padrino / Madrina";
-                    if (estadoCivilPadrinos == "Casado(a)")
-                    {
-                        temp[cant++] = "5. Partida Matrimonio Religioso Padrinos";
-                    }
-                    else
-                    {
-                        temp[cant++] = "5. Constancia Confirmación Padrino/Madrina";
-                    }
+                    temp[cant++] = (estadoCivilPadrinos == "Casado(a)")
+                        ? "5. Partida Matrimonio Religioso Padrinos"
+                        : "5. Constancia Confirmación Padrino/Madrina";
                 }
             }
             else if (sacramento == "Matrimonio")
@@ -987,7 +1020,7 @@ namespace SIGEP_App
 
             PictureBox pbSigep = new PictureBox();
             pbSigep.Size = new Size(110, 110);
-            pbSigep.Location = new Point(130, 40);
+            pbSigep.Location = new Point(130, 35);
             pbSigep.SizeMode = PictureBoxSizeMode.Zoom;
             string ruta_logo_sigep = Path.Combine(this.ruta_assets, "logo.png");
             if (File.Exists(ruta_logo_sigep))
@@ -998,7 +1031,7 @@ namespace SIGEP_App
 
             PictureBox pbParr = new PictureBox();
             pbParr.Size = new Size(110, 110);
-            pbParr.Location = new Point(260, 40);
+            pbParr.Location = new Point(260, 35);
             pbParr.SizeMode = PictureBoxSizeMode.Zoom;
             string ruta_logo_parroquia = Path.Combine(this.ruta_assets, "parroquia.png");
             if (File.Exists(ruta_logo_parroquia))
@@ -1009,53 +1042,39 @@ namespace SIGEP_App
 
             Label lblBienv = new Label();
             lblBienv.Text = "Bienvenido a SIGEP";
-            lblBienv.Font = new Font("Segoe UI", 22f, FontStyle.Bold);
+            lblBienv.Font = FuentePx(28f, FontStyle.Bold);
             lblBienv.ForeColor = ColorTranslator.FromHtml("#0f172a");
-            lblBienv.Size = new Size(500, 45);
-            lblBienv.Location = new Point(0, 165);
+            lblBienv.Size = new Size(500, 42);
+            lblBienv.Location = new Point(0, 160);
             lblBienv.TextAlign = ContentAlignment.MiddleCenter;
             f_der.Controls.Add(lblBienv);
 
             Label lblSub = new Label();
             lblSub.Text = "Inicie sesión para continuar";
-            lblSub.Font = new Font("Segoe UI", 12f, FontStyle.Regular);
+            lblSub.Font = FuentePx(15f, FontStyle.Regular);
             lblSub.ForeColor = ColorTranslator.FromHtml("#64748b");
-            lblSub.Size = new Size(500, 30);
-            lblSub.Location = new Point(0, 210);
+            lblSub.Size = new Size(500, 28);
+            lblSub.Location = new Point(0, 205);
             lblSub.TextAlign = ContentAlignment.MiddleCenter;
             f_der.Controls.Add(lblSub);
 
-            Label lblU = new Label();
-            lblU.Text = "Usuario:";
-            lblU.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblU.Location = new Point(90, 260);
-            lblU.AutoSize = true;
+            Label lblU = new Label() { Text = "Usuario:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(90, 255), AutoSize = true };
             f_der.Controls.Add(lblU);
 
-            TextBox txt_u = new TextBox();
-            txt_u.Font = new Font("Segoe UI", 12f);
-            txt_u.Size = new Size(320, 35);
-            txt_u.Location = new Point(90, 285);
+            TextBox txt_u = new TextBox() { Size = new Size(320, 32), Location = new Point(90, 280) };
+            this.adjuntar_validacion(txt_u, "libre");
+            txt_u.Font = FuentePx(15f, FontStyle.Regular);
             f_der.Controls.Add(txt_u);
 
-            Label lblP = new Label();
-            lblP.Text = "Contraseña:";
-            lblP.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblP.Location = new Point(90, 335);
-            lblP.AutoSize = true;
+            Label lblP = new Label() { Text = "Contraseña:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(90, 330), AutoSize = true };
             f_der.Controls.Add(lblP);
 
-            TextBox txt_p = new TextBox();
-            txt_p.Font = new Font("Segoe UI", 12f);
-            txt_p.Size = new Size(320, 35);
-            txt_p.Location = new Point(90, 360);
-            txt_p.PasswordChar = '*';
+            TextBox txt_p = new TextBox() { Size = new Size(320, 32), Location = new Point(90, 355), PasswordChar = '*' };
+            this.adjuntar_validacion(txt_p, "libre");
+            txt_p.Font = FuentePx(15f, FontStyle.Regular);
             f_der.Controls.Add(txt_p);
 
-            this.adjuntar_validacion(txt_u, "libre");
-            this.adjuntar_validacion(txt_p, "libre");
-
-            Button btn_ingresar = CrearBotonAccion("Ingresar al sistema", ColorTranslator.FromHtml("#2563eb"), new Point(90, 420), new Size(320, 45), 12f);
+            Button btn_ingresar = CrearBotonAccion("Ingresar al sistema", ColorTranslator.FromHtml("#2563eb"), new Point(90, 415), new Size(320, 45), 15f);
             f_der.Controls.Add(btn_ingresar);
 
             Action intentar_login = () =>
@@ -1107,8 +1126,8 @@ namespace SIGEP_App
             Action centrar = () =>
             {
                 f_login.Location = new Point(
-                    Math.Max(0, (this.container.Width - f_login.Width) / 2),
-                    Math.Max(0, (this.container.Height - f_login.Height) / 2)
+                    Math.Max(0, (this.container.ClientSize.Width - f_login.Width) / 2),
+                    Math.Max(0, (this.container.ClientSize.Height - f_login.Height) / 2)
                 );
             };
             centrar();
@@ -1121,7 +1140,7 @@ namespace SIGEP_App
             this.limpiar_contenedor();
 
             this.sidebar = new Panel();
-            this.sidebar.Width = 250;
+            this.sidebar.Width = 235;
             this.sidebar.Dock = DockStyle.Left;
             this.sidebar.BackColor = ColorTranslator.FromHtml("#1e293b");
 
@@ -1130,21 +1149,21 @@ namespace SIGEP_App
             {
                 PictureBox pbLogo = new PictureBox();
                 pbLogo.Size = new Size(85, 85);
-                pbLogo.Location = new Point(82, 30);
+                pbLogo.Location = new Point(75, 28);
                 pbLogo.SizeMode = PictureBoxSizeMode.Zoom;
                 pbLogo.Image = Image.FromFile(ruta_logo_blanco);
                 this.sidebar.Controls.Add(pbLogo);
             }
 
-            Button btnDash = CrearBotonSidebar("📊 Panel de Inicio", 150);
+            Button btnDash = CrearBotonSidebar("📊 Panel de Inicio", 145);
             btnDash.Click += (s, e) => this.mostrar_dashboard();
             this.sidebar.Controls.Add(btnDash);
 
-            Button btnReg = CrearBotonSidebar("📝 Nuevo Expediente", 200);
+            Button btnReg = CrearBotonSidebar("📝 Nuevo Expediente", 195);
             btnReg.Click += (s, e) => this.mostrar_registro();
             this.sidebar.Controls.Add(btnReg);
 
-            Button btnBus = CrearBotonSidebar("🔍 Buscar y Editar", 250);
+            Button btnBus = CrearBotonSidebar("🔍 Buscar y Editar", 245);
             btnBus.Click += (s, e) => this.mostrar_buscar();
             this.sidebar.Controls.Add(btnBus);
 
@@ -1152,11 +1171,11 @@ namespace SIGEP_App
             btnRep.Click += (s, e) => this.mostrar_reportes();
             this.sidebar.Controls.Add(btnRep);
 
-            Button btnConf = CrearBotonSidebar("⚙ Configuración de Fechas", 350);
+            Button btnConf = CrearBotonSidebar("⚙ Configuración de Fechas", 345);
             btnConf.Click += (s, e) => this.mostrar_configuracion();
             this.sidebar.Controls.Add(btnConf);
 
-            Button btnAvanzadas = CrearBotonSidebar("📜 Opciones Avanzadas", 400);
+            Button btnAvanzadas = CrearBotonSidebar("📜 Opciones Avanzadas", 395);
             btnAvanzadas.Click += (s, e) => this.mostrar_opciones_avanzadas();
             this.sidebar.Controls.Add(btnAvanzadas);
 
@@ -1175,8 +1194,8 @@ namespace SIGEP_App
         {
             Button btn = new Button();
             btn.Text = "   " + texto;
-            btn.Font = new Font("Segoe UI", 11f, FontStyle.Regular);
-            btn.Size = new Size(250, 44);
+            btn.Font = FuentePx(14f, FontStyle.Regular);
+            btn.Size = new Size(235, 44);
             btn.Location = new Point(0, top);
             btn.UseVisualStyleBackColor = false;
             btn.FlatStyle = FlatStyle.Flat;
@@ -1194,44 +1213,18 @@ namespace SIGEP_App
         {
             this.limpiar_contenido();
 
-            Label lblHola = new Label();
-            lblHola.Text = "Hola, Bienvenida";
-            lblHola.Font = new Font("Segoe UI", 24f, FontStyle.Bold);
-            lblHola.ForeColor = ColorTranslator.FromHtml("#0f172a");
-            lblHola.Location = new Point(40, 40);
-            lblHola.AutoSize = true;
+            Label lblHola = new Label() { Text = "Hola, Bienvenida", Font = FuentePx(28f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#0f172a"), Location = new Point(30, 30), AutoSize = true };
             this.content_frame.Controls.Add(lblHola);
 
-            Label lblSub = new Label();
-            lblSub.Text = "Resumen de Operaciones - Parroquia San José";
-            lblSub.Font = new Font("Segoe UI", 12f, FontStyle.Regular);
-            lblSub.ForeColor = ColorTranslator.FromHtml("#64748b");
-            lblSub.Location = new Point(40, 85);
-            lblSub.AutoSize = true;
+            Label lblSub = new Label() { Text = "Resumen de Operaciones - Parroquia San José", Font = FuentePx(15f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), Location = new Point(30, lblHola.Bottom + 8), AutoSize = true };
             this.content_frame.Controls.Add(lblSub);
 
-            Panel card1 = new Panel();
-            card1.Size = new Size(350, 120);
-            card1.Location = new Point(40, 130);
-            card1.BackColor = Color.White;
-            card1.BorderStyle = BorderStyle.FixedSingle;
+            Panel card1 = new Panel() { Size = new Size(360, 125), Location = new Point(30, lblSub.Bottom + 25), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            Label lblCardTit = new Label() { Text = "EXPEDIENTES TOTALES", Font = FuentePx(13.5f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#10b981"), Location = new Point(20, 20), AutoSize = true };
+            Label lblTotal = new Label() { Text = this.db.total_registros.ToString(), Font = FuentePx(34f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#0f172a"), Location = new Point(20, 52), AutoSize = true };
 
-            Label lblCardTit = new Label();
-            lblCardTit.Text = "EXPEDIENTES TOTALES";
-            lblCardTit.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            lblCardTit.ForeColor = ColorTranslator.FromHtml("#10b981");
-            lblCardTit.Location = new Point(20, 20);
-            lblCardTit.AutoSize = true;
             card1.Controls.Add(lblCardTit);
-
-            Label lblTotal = new Label();
-            lblTotal.Text = this.db.total_registros.ToString();
-            lblTotal.Font = new Font("Segoe UI", 26f, FontStyle.Bold);
-            lblTotal.ForeColor = ColorTranslator.FromHtml("#0f172a");
-            lblTotal.Location = new Point(20, 50);
-            lblTotal.AutoSize = true;
             card1.Controls.Add(lblTotal);
-
             this.content_frame.Controls.Add(card1);
         }
 
@@ -1240,28 +1233,13 @@ namespace SIGEP_App
         {
             this.limpiar_contenido();
 
-            Label lblTit = new Label();
-            lblTit.Text = "Configuración de Fechas de Catequesis";
-            lblTit.Font = new Font("Segoe UI", 20f, FontStyle.Bold);
-            lblTit.ForeColor = ColorTranslator.FromHtml("#2563eb");
-            lblTit.Location = new Point(40, 30);
-            lblTit.AutoSize = true;
+            Label lblTit = new Label() { Text = "Configuración de Fechas de Catequesis", Font = FuentePx(24f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#2563eb"), Location = new Point(30, 25), AutoSize = true };
             this.content_frame.Controls.Add(lblTit);
 
-            Panel f_conf = new Panel();
-            f_conf.Size = new Size(650, 250);
-            f_conf.Location = new Point(40, 80);
-            f_conf.BackColor = Color.White;
-            f_conf.BorderStyle = BorderStyle.FixedSingle;
-
-            Label lblSub = new Label();
-            lblSub.Text = "Selecciona la fecha de inicio (Día / Mes)";
-            lblSub.Font = new Font("Segoe UI", 12f, FontStyle.Bold);
-            lblSub.Location = new Point(20, 20);
-            lblSub.AutoSize = true;
+            Panel f_conf = new Panel() { Size = new Size(680, 250), Location = new Point(30, lblTit.Bottom + 20), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            Label lblSub = new Label() { Text = "Selecciona la fecha de inicio (Día / Mes)", Font = FuentePx(15f, FontStyle.Bold), Location = new Point(25, 22), AutoSize = true };
             f_conf.Controls.Add(lblSub);
 
-            // Arreglos puros para días y meses
             string[] lista_dias = new string[32];
             lista_dias[0] = "--";
             for (int i = 1; i <= 31; i++)
@@ -1277,69 +1255,40 @@ namespace SIGEP_App
             }
 
             string[] partes_com = this.config.fecha_comunion.Split('/');
-            string c_dia = "--";
-            string c_mes = "--";
-            if (partes_com.Length == 2)
-            {
-                c_dia = partes_com[0];
-                c_mes = partes_com[1];
-            }
+            string c_dia = partes_com.Length == 2 ? partes_com[0] : "--";
+            string c_mes = partes_com.Length == 2 ? partes_com[1] : "--";
 
-            Label lblCom = new Label();
-            lblCom.Text = "Primera Comunión:";
-            lblCom.Location = new Point(20, 70);
-            lblCom.Size = new Size(180, 25);
-            f_conf.Controls.Add(lblCom);
-
-            ComboBox cb_d_com = new ComboBox();
-            cb_d_com.DropDownStyle = ComboBoxStyle.DropDownList;
+            Label lblCom = new Label() { Text = "Primera Comunión:", Font = FuentePx(14f, FontStyle.Bold), Location = new Point(25, 72), AutoSize = true };
+            ComboBox cb_d_com = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 75, Font = FuentePx(13.5f) };
             cb_d_com.Items.AddRange(lista_dias);
             cb_d_com.SelectedItem = c_dia;
-            cb_d_com.Location = new Point(210, 68);
-            cb_d_com.Width = 70;
-            f_conf.Controls.Add(cb_d_com);
 
-            ComboBox cb_m_com = new ComboBox();
-            cb_m_com.DropDownStyle = ComboBoxStyle.DropDownList;
+            ComboBox cb_m_com = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 75, Font = FuentePx(13.5f) };
             cb_m_com.Items.AddRange(lista_meses);
             cb_m_com.SelectedItem = c_mes;
-            cb_m_com.Location = new Point(290, 68);
-            cb_m_com.Width = 70;
-            f_conf.Controls.Add(cb_m_com);
 
             string[] partes_con = this.config.fecha_confirmacion.Split('/');
-            string cf_dia = "--";
-            string cf_mes = "--";
-            if (partes_con.Length == 2)
-            {
-                cf_dia = partes_con[0];
-                cf_mes = partes_con[1];
-            }
+            string cf_dia = partes_con.Length == 2 ? partes_con[0] : "--";
+            string cf_mes = partes_con.Length == 2 ? partes_con[1] : "--";
 
-            Label lblCon = new Label();
-            lblCon.Text = "Confirmación:";
-            lblCon.Location = new Point(20, 115);
-            lblCon.Size = new Size(180, 25);
-            f_conf.Controls.Add(lblCon);
-
-            ComboBox cb_d_con = new ComboBox();
-            cb_d_con.DropDownStyle = ComboBoxStyle.DropDownList;
+            Label lblCon = new Label() { Text = "Confirmación:", Font = FuentePx(14f, FontStyle.Bold), Location = new Point(25, 118), AutoSize = true };
+            ComboBox cb_d_con = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 75, Font = FuentePx(13.5f) };
             cb_d_con.Items.AddRange(lista_dias);
             cb_d_con.SelectedItem = cf_dia;
-            cb_d_con.Location = new Point(210, 113);
-            cb_d_con.Width = 70;
-            f_conf.Controls.Add(cb_d_con);
 
-            ComboBox cb_m_con = new ComboBox();
-            cb_m_con.DropDownStyle = ComboBoxStyle.DropDownList;
+            ComboBox cb_m_con = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 75, Font = FuentePx(13.5f) };
             cb_m_con.Items.AddRange(lista_meses);
             cb_m_con.SelectedItem = cf_mes;
-            cb_m_con.Location = new Point(290, 113);
-            cb_m_con.Width = 70;
-            f_conf.Controls.Add(cb_m_con);
 
-            Button btnGuardar = CrearBotonAccion("Guardar Cambios", ColorTranslator.FromHtml("#10b981"), new Point(20, 175), new Size(180, 42));
+            f_conf.Controls.AddRange(new Control[] { lblCom, cb_d_com, cb_m_com, lblCon, cb_d_con, cb_m_con });
 
+            int xCombos = Math.Max(lblCom.Right, lblCon.Right) + 25;
+            cb_d_com.Location = new Point(xCombos, 69);
+            cb_m_com.Location = new Point(cb_d_com.Right + 12, 69);
+            cb_d_con.Location = new Point(xCombos, 115);
+            cb_m_con.Location = new Point(cb_d_con.Right + 12, 115);
+
+            Button btnGuardar = CrearBotonAccion("Guardar Cambios", ColorTranslator.FromHtml("#10b981"), new Point(25, 175), new Size(190, 42));
             btnGuardar.Click += (s, e) =>
             {
                 string dia_com = cb_d_com.SelectedItem.ToString();
@@ -1417,143 +1366,152 @@ namespace SIGEP_App
         {
             this.limpiar_contenido();
 
-            Label lblTit = new Label();
-            lblTit.Text = "Registro Documentario";
-            lblTit.Font = new Font("Segoe UI", 20f, FontStyle.Bold);
-            lblTit.ForeColor = ColorTranslator.FromHtml("#2563eb");
-            lblTit.Location = new Point(40, 15);
-            lblTit.AutoSize = true;
+            Label lblTit = new Label() { Text = "Registro Documentario", Font = FuentePx(24f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#2563eb"), Location = new Point(25, 15), AutoSize = true };
             this.content_frame.Controls.Add(lblTit);
 
-            Panel f_main = new Panel();
-            f_main.Location = new Point(40, 60);
-            f_main.Size = new Size(940, 710);
-            f_main.BackColor = Color.White;
-            f_main.BorderStyle = BorderStyle.FixedSingle;
+            Panel f_main = new Panel() { Location = new Point(25, lblTit.Bottom + 12), Size = new Size(Math.Max(780, this.content_frame.ClientSize.Width - 55), 690), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
 
-            Label lblTram = new Label() { Text = "Trámite:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 20), AutoSize = true };
-            ComboBox cb_tipo = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(165, 17), Width = 220 };
+            Label lblTram = new Label() { Text = "Trámite:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(25, 22), AutoSize = true };
+            ComboBox cb_tipo = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220, Font = FuentePx(13.5f) };
             cb_tipo.Items.AddRange(new string[] { "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
 
-            f_main.Controls.AddRange(new Control[] { lblTram, cb_tipo });
-
-            Label lbl_d1 = new Label() { Text = "DNI Bautizado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 62), Size = new Size(132, 25) };
-            TextBox txt_d1 = new TextBox() { Location = new Point(165, 59), Width = 110 };
+            Label lbl_d1 = new Label() { Text = "DNI Bautizado:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_d1 = new TextBox();
             this.adjuntar_validacion(txt_d1, "dni");
 
-            Label lbl_nom1 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(290, 62), AutoSize = true };
-            TextBox txt_nom1 = new TextBox() { Location = new Point(365, 59), Width = 215 };
+            Label lbl_nom1 = new Label() { Text = "Nombres:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_nom1 = new TextBox();
             AsignarPlaceholder(txt_nom1, "NOMBRES");
             this.adjuntar_validacion(txt_nom1, "texto");
 
-            Label lbl_ape1 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(595, 62), AutoSize = true };
-            TextBox txt_ape1 = new TextBox() { Location = new Point(670, 59), Width = 235 };
+            Label lbl_ape1 = new Label() { Text = "Apellidos:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_ape1 = new TextBox();
             AsignarPlaceholder(txt_ape1, "APELLIDOS");
             this.adjuntar_validacion(txt_ape1, "texto");
 
-            f_main.Controls.AddRange(new Control[] { lbl_d1, txt_d1, lbl_nom1, txt_nom1, lbl_ape1, txt_ape1 });
-
-            Label lbl_d2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 102), Size = new Size(132, 25), Visible = false };
-            TextBox txt_d2 = new TextBox() { Location = new Point(165, 99), Width = 110, Visible = false };
+            Label lbl_d2 = new Label() { Text = "DNI Novia:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox txt_d2 = new TextBox() { Visible = false };
             this.adjuntar_validacion(txt_d2, "dni");
 
-            Label lbl_nom2 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(290, 102), AutoSize = true, Visible = false };
-            TextBox txt_nom2 = new TextBox() { Location = new Point(365, 99), Width = 215, Visible = false };
+            Label lbl_nom2 = new Label() { Text = "Nombres:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox txt_nom2 = new TextBox() { Visible = false };
             AsignarPlaceholder(txt_nom2, "NOMBRES NOVIA");
             this.adjuntar_validacion(txt_nom2, "texto");
 
-            Label lbl_ape2 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(595, 102), AutoSize = true, Visible = false };
-            TextBox txt_ape2 = new TextBox() { Location = new Point(670, 99), Width = 235, Visible = false };
+            Label lbl_ape2 = new Label() { Text = "Apellidos:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox txt_ape2 = new TextBox() { Visible = false };
             AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
             this.adjuntar_validacion(txt_ape2, "texto");
-
-            f_main.Controls.AddRange(new Control[] { lbl_d2, txt_d2, lbl_nom2, txt_nom2, lbl_ape2, txt_ape2 });
 
             this.VincularAutocompletadoReniecSeparado(txt_d1, txt_nom1, txt_ape1, txt_d2, null);
             this.VincularAutocompletadoReniecSeparado(txt_d2, txt_nom2, txt_ape2, txt_d1, null);
 
-            CheckBox chk_padrinos = new CheckBox() { Text = "¿Cuenta con Padrinos?", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 142), AutoSize = true, Checked = true };
-            Label lbl_est_pad = new Label() { Text = "Estado Civil Padrino(s):", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(260, 144), AutoSize = true };
-            ComboBox cb_est_pad = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(435, 141), Width = 160 };
+            CheckBox chk_padrinos = new CheckBox() { Text = "¿Cuenta con Padrinos?", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(25, 140), AutoSize = true, Checked = true };
+            Label lbl_est_pad = new Label() { Text = "Estado Civil Padrino(s):", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            ComboBox cb_est_pad = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 160, Font = FuentePx(13.5f) };
             cb_est_pad.Items.AddRange(new string[] { "Soltero(a)", "Casado(a)" });
             cb_est_pad.SelectedIndex = 0;
 
-            f_main.Controls.AddRange(new Control[] { chk_padrinos, lbl_est_pad, cb_est_pad });
-
-            Panel f_req = new Panel();
-            f_req.Location = new Point(30, 180);
-            f_req.Size = new Size(875, 185);
-            f_req.BackColor = ColorTranslator.FromHtml("#f8fafc");
-            f_req.BorderStyle = BorderStyle.FixedSingle;
-
-            Label lblReqTit = new Label() { Text = "Requisitos de Documentación:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
+            Panel f_req = new Panel() { Location = new Point(25, 178), Size = new Size(f_main.ClientSize.Width - 50, 185), BackColor = ColorTranslator.FromHtml("#f8fafc"), BorderStyle = BorderStyle.FixedSingle };
+            Label lblReqTit = new Label() { Text = "Requisitos de Documentación:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
             f_req.Controls.Add(lblReqTit);
 
             for (int i = 0; i < 9; i++)
             {
-                CheckBox chk = new CheckBox();
-                chk.AutoSize = true;
-                int col = i % 2;
-                int fila = i / 2;
-                chk.Location = new Point(20 + (col * 420), 38 + (fila * 27));
+                CheckBox chk = new CheckBox() { Font = FuentePx(13f, FontStyle.Regular), AutoSize = true };
                 this.chks[i] = chk;
                 f_req.Controls.Add(chk);
             }
-            f_main.Controls.Add(f_req);
 
-            Label lblPago = new Label() { Text = "Estado de Pago:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(30, 380), Size = new Size(125, 25) };
-            ComboBox cb_pago = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(160, 378), Width = 150 };
+            Label lblPago = new Label() { Text = "Estado de Pago:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(25, 378), AutoSize = true };
+            ComboBox cb_pago = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150, Font = FuentePx(13.5f) };
             cb_pago.Items.AddRange(new string[] { "Pagado", "Falta Pagar" });
             cb_pago.SelectedIndex = 0;
 
-            TextBox txt_deuda = new TextBox() { Location = new Point(330, 378), Width = 150, Visible = false };
+            TextBox txt_deuda = new TextBox() { Width = 150, Visible = false };
             AsignarPlaceholder(txt_deuda, "Monto deuda S/");
             this.adjuntar_validacion(txt_deuda, "numero");
 
-            f_main.Controls.AddRange(new Control[] { lblPago, cb_pago, txt_deuda });
-
-            Panel f_obs_izq = new Panel() { Location = new Point(30, 420), Size = new Size(425, 175), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
-            Label lblObsGen = new Label() { Text = "Observación Generada:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
-            TextBox txt_obs_auto = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 36), Size = new Size(395, 122), BackColor = Color.White };
+            Panel f_obs_izq = new Panel() { BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            Label lblObsGen = new Label() { Text = "Observación Generada:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
+            TextBox txt_obs_auto = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 36), BackColor = Color.White, Font = FuentePx(13f) };
             f_obs_izq.Controls.AddRange(new Control[] { lblObsGen, txt_obs_auto });
-            f_main.Controls.Add(f_obs_izq);
 
-            Panel f_obs_der = new Panel() { Location = new Point(480, 420), Size = new Size(425, 175), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
-            CheckBox chk_adic = new CheckBox() { Text = "¿Añadir observación adicional manual?", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
-            TextBox txt_obs_adic = new TextBox() { Multiline = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 36), Size = new Size(395, 122), Visible = false };
+            Panel f_obs_der = new Panel() { BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            CheckBox chk_adic = new CheckBox() { Text = "¿Añadir observación adicional manual?", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 10), AutoSize = true };
+            TextBox txt_obs_adic = new TextBox() { Multiline = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 36), Visible = false, Font = FuentePx(13f) };
             f_obs_der.Controls.AddRange(new Control[] { chk_adic, txt_obs_adic });
-            f_main.Controls.Add(f_obs_der);
+
+            Button btnGuardarExp = CrearBotonAccion("Inscribir y Guardar Expediente", ColorTranslator.FromHtml("#2563eb"), new Point(250, 615), new Size(340, 48), 16f);
+
+            f_main.Controls.AddRange(new Control[] {
+                lblTram, cb_tipo,
+                lbl_d1, txt_d1, lbl_nom1, txt_nom1, lbl_ape1, txt_ape1,
+                lbl_d2, txt_d2, lbl_nom2, txt_nom2, lbl_ape2, txt_ape2,
+                chk_padrinos, lbl_est_pad, cb_est_pad,
+                f_req, lblPago, cb_pago, txt_deuda,
+                f_obs_izq, f_obs_der, btnGuardarExp
+            });
+
+            Action ajustarDisenoRegistro = () =>
+            {
+                int anchoDisp = Math.Max(780, this.content_frame.ClientSize.Width - 55);
+                f_main.Width = anchoDisp;
+                cb_tipo.Location = new Point(lblTram.Right + 12, 18);
+
+                this.DistribuirFilaPersona(f_main, 58, true, lbl_d1, txt_d1, lbl_nom1, txt_nom1, lbl_ape1, txt_ape1);
+                this.DistribuirFilaPersona(f_main, 98, true, lbl_d2, txt_d2, lbl_nom2, txt_nom2, lbl_ape2, txt_ape2);
+
+                chk_padrinos.Location = new Point(25, 140);
+                lbl_est_pad.Location = new Point(chk_padrinos.Right + 30, 142);
+                cb_est_pad.Location = new Point(lbl_est_pad.Right + 10, 138);
+
+                f_req.Width = anchoDisp - 50;
+                int mitadReq = Math.Max(340, (f_req.ClientSize.Width - 40) / 2);
+                for (int i = 0; i < 9; i++)
+                {
+                    this.chks[i].Location = new Point(20 + ((i % 2) * mitadReq), 38 + ((i / 2) * 28));
+                }
+
+                lblPago.Location = new Point(25, 380);
+                cb_pago.Location = new Point(lblPago.Right + 12, 376);
+                txt_deuda.Location = new Point(cb_pago.Right + 16, 376);
+
+                int anchoCajaObs = (f_req.Width - 20) / 2;
+                f_obs_izq.Location = new Point(25, 420);
+                f_obs_izq.Size = new Size(anchoCajaObs, 175);
+                txt_obs_auto.Size = new Size(anchoCajaObs - 30, 122);
+
+                f_obs_der.Location = new Point(f_obs_izq.Right + 20, 420);
+                f_obs_der.Size = new Size(anchoCajaObs, 175);
+                txt_obs_adic.Size = new Size(anchoCajaObs - 30, 122);
+
+                btnGuardarExp.Location = new Point((anchoDisp - btnGuardarExp.Width) / 2, 615);
+                f_main.Invalidate();
+            };
+
+            this.content_frame.Resize += (s, e) => ajustarDisenoRegistro();
 
             Action actualizar_obs_auto = () =>
             {
                 string[] faltantes = new string[9];
                 int cantFaltantes = 0;
-
                 for (int i = 0; i < this.reqs_activos; i++)
                 {
                     if (!this.chks[i].Checked)
                     {
-                        string texto_limpio = this.chks[i].Text.Substring(3);
-                        faltantes[cantFaltantes] = texto_limpio;
-                        cantFaltantes++;
+                        faltantes[cantFaltantes++] = this.chks[i].Text.Substring(3);
                     }
                 }
 
-                string texto = "";
-                if (cantFaltantes > 0)
-                {
-                    texto = "Faltan los siguientes documentos físicos:\r\n- " + this.UnirArregloConSeparador(faltantes, cantFaltantes, "\r\n- ") + "\r\n";
-                }
-                else
-                {
-                    texto = "Documentación física completa.\r\n";
-                }
+                string texto = (cantFaltantes > 0)
+                    ? "Faltan los siguientes documentos físicos:\r\n- " + this.UnirArregloConSeparador(faltantes, cantFaltantes, "\r\n- ") + "\r\n"
+                    : "Documentación física completa.\r\n";
 
                 if (cb_pago.SelectedItem != null && cb_pago.SelectedItem.ToString() == "Falta Pagar")
                 {
-                    texto = texto + "Pendiente de pago por regularizar.";
+                    texto += "Pendiente de pago por regularizar.";
                 }
-
                 txt_obs_auto.Text = texto.Trim();
             };
 
@@ -1573,55 +1531,18 @@ namespace SIGEP_App
                 string estPad = cb_est_pad.SelectedItem != null ? cb_est_pad.SelectedItem.ToString() : "Soltero(a)";
 
                 lbl_d1.Text = this.ObtenerEtiquetaDniPorSacramento(eleccion);
+                bool esMat = (eleccion == "Matrimonio");
 
-                if (eleccion == "Bautizo")
-                {
-                    lbl_d2.Visible = false;
-                    txt_d2.Visible = false;
-                    lbl_nom2.Visible = false;
-                    txt_nom2.Visible = false;
-                    lbl_ape2.Visible = false;
-                    txt_ape2.Visible = false;
-                    chk_padrinos.Visible = true;
-                    lbl_est_pad.Visible = tienePad;
-                    cb_est_pad.Visible = tienePad;
-                }
-                else if (eleccion == "Primera Comunión")
-                {
-                    lbl_d2.Visible = false;
-                    txt_d2.Visible = false;
-                    lbl_nom2.Visible = false;
-                    txt_nom2.Visible = false;
-                    lbl_ape2.Visible = false;
-                    txt_ape2.Visible = false;
-                    chk_padrinos.Visible = true;
-                    lbl_est_pad.Visible = false;
-                    cb_est_pad.Visible = false;
-                }
-                else if (eleccion == "Confirmación")
-                {
-                    lbl_d2.Visible = false;
-                    txt_d2.Visible = false;
-                    lbl_nom2.Visible = false;
-                    txt_nom2.Visible = false;
-                    lbl_ape2.Visible = false;
-                    txt_ape2.Visible = false;
-                    chk_padrinos.Visible = true;
-                    lbl_est_pad.Visible = tienePad;
-                    cb_est_pad.Visible = tienePad;
-                }
-                else if (eleccion == "Matrimonio")
-                {
-                    lbl_d2.Visible = true;
-                    txt_d2.Visible = true;
-                    lbl_nom2.Visible = true;
-                    txt_nom2.Visible = true;
-                    lbl_ape2.Visible = true;
-                    txt_ape2.Visible = true;
-                    chk_padrinos.Visible = false;
-                    lbl_est_pad.Visible = false;
-                    cb_est_pad.Visible = false;
-                }
+                lbl_d2.Visible = esMat;
+                txt_d2.Visible = esMat;
+                lbl_nom2.Visible = esMat;
+                txt_nom2.Visible = esMat;
+                lbl_ape2.Visible = esMat;
+                txt_ape2.Visible = esMat;
+
+                chk_padrinos.Visible = !esMat;
+                lbl_est_pad.Visible = ((eleccion == "Bautizo" || eleccion == "Confirmación") && tienePad);
+                cb_est_pad.Visible = ((eleccion == "Bautizo" || eleccion == "Confirmación") && tienePad);
 
                 string[] reqs = this.ObtenerRequisitosSacramento(eleccion, tienePad, estPad);
                 this.reqs_activos = reqs.Length;
@@ -1638,7 +1559,7 @@ namespace SIGEP_App
                         this.chks[j].Checked = false;
                     }
                 }
-                f_main.Invalidate();
+                ajustarDisenoRegistro();
                 actualizar_obs_auto();
             };
 
@@ -1686,20 +1607,16 @@ namespace SIGEP_App
 
             chk_adic.CheckedChanged += (s, e) =>
             {
-                if (chk_adic.Checked)
+                txt_obs_adic.Visible = chk_adic.Checked;
+                if (!chk_adic.Checked)
                 {
-                    txt_obs_adic.Visible = true;
-                }
-                else
-                {
-                    txt_obs_adic.Visible = false;
                     txt_obs_adic.Text = "";
                 }
             };
 
+            this.content_frame.Controls.Add(f_main);
             cb_tipo.SelectedItem = "Bautizo";
-
-            Button btnGuardarExp = CrearBotonAccion("Inscribir y Guardar Expediente", ColorTranslator.FromHtml("#2563eb"), new Point(295, 620), new Size(350, 50), 13f);
+            ajustarDisenoRegistro();
 
             btnGuardarExp.Click += (s, e) =>
             {
@@ -1869,9 +1786,6 @@ namespace SIGEP_App
                 MessageBox.Show("Expediente registrado y guardado correctamente en el sistema.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 this.mostrar_dashboard();
             };
-
-            f_main.Controls.Add(btnGuardarExp);
-            this.content_frame.Controls.Add(f_main);
         }
 
         // ================= 6. BUSCAR Y EDITAR =================
@@ -1879,32 +1793,207 @@ namespace SIGEP_App
         {
             this.limpiar_contenido();
 
-            Label lblTit = new Label();
-            lblTit.Text = "Buscador y Editor de Expedientes";
-            lblTit.Font = new Font("Segoe UI", 20f, FontStyle.Bold);
-            lblTit.ForeColor = ColorTranslator.FromHtml("#2563eb");
-            lblTit.Location = new Point(40, 15);
-            lblTit.AutoSize = true;
+            Label lblTit = new Label() { Text = "Buscador y Editor de Expedientes", Font = FuentePx(24f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#2563eb"), Location = new Point(25, 15), AutoSize = true };
             this.content_frame.Controls.Add(lblTit);
 
-            Panel f_top = new Panel();
-            f_top.Location = new Point(40, 55);
-            f_top.Size = new Size(940, 62);
-            f_top.BackColor = Color.White;
-            f_top.BorderStyle = BorderStyle.FixedSingle;
+            Panel f_top = new Panel() { Location = new Point(25, lblTit.Bottom + 10), Size = new Size(Math.Max(780, this.content_frame.ClientSize.Width - 55), 60), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
 
-            Label lblCriterio = new Label() { Text = "Buscar por:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 20), AutoSize = true };
-            ComboBox cb_criterio = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(105, 17), Width = 130 };
+            Label lblCriterio = new Label() { Text = "Buscar por:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 20), AutoSize = true };
+            ComboBox cb_criterio = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130, Font = FuentePx(13.5f) };
             cb_criterio.Items.AddRange(new string[] { "DNI", "Apellidos" });
             cb_criterio.SelectedIndex = 0;
 
-            TextBox txt_bus_dni = new TextBox() { Location = new Point(250, 17), Width = 220 };
+            TextBox txt_bus_dni = new TextBox() { Width = 220 };
             AsignarPlaceholder(txt_bus_dni, "Ingrese 8 dígitos del DNI");
             this.adjuntar_validacion(txt_bus_dni, "dni");
 
-            TextBox txt_bus_ape = new TextBox() { Location = new Point(250, 17), Width = 260, Visible = false };
+            TextBox txt_bus_ape = new TextBox() { Width = 250, Visible = false };
             AsignarPlaceholder(txt_bus_ape, "INGRESE APELLIDOS A BUSCAR");
             this.adjuntar_validacion(txt_bus_ape, "texto");
+
+            Button btnConsultar = CrearBotonAccion("Consultar", ColorTranslator.FromHtml("#10b981"), new Point(520, 12), new Size(140, 35));
+
+            f_top.Controls.AddRange(new Control[] { lblCriterio, cb_criterio, txt_bus_dni, txt_bus_ape, btnConsultar });
+            this.content_frame.Controls.Add(f_top);
+
+            DataGridView tablaResultados = new DataGridView() { Location = new Point(25, f_top.Bottom + 10), Size = new Size(f_top.Width, 145) };
+            this.ConfigurarTablaResponsiva(tablaResultados);
+            tablaResultados.Columns.Add("colDni", "DNI");
+            tablaResultados.Columns.Add("colNom", "Nombres");
+            tablaResultados.Columns.Add("colApe", "Apellidos");
+            tablaResultados.Columns.Add("colSac", "Sacramento");
+            tablaResultados.Columns.Add("colEst", "Estado");
+            tablaResultados.Columns.Add("colPag", "Pago");
+            this.content_frame.Controls.Add(tablaResultados);
+
+            Panel f_edit = new Panel() { Location = new Point(25, tablaResultados.Bottom + 10), Size = new Size(f_top.Width, 650), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Visible = false };
+
+            int idx_actual = -1;
+            bool cargandoEdicion = false;
+            bool llenandoTabla = false;
+
+            Label lbl_e_dni1 = new Label() { Text = "DNI Bautizado:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox t_dni1 = new TextBox();
+            this.adjuntar_validacion(t_dni1, "dni");
+
+            Label lbl_e_nom1 = new Label() { Text = "Nombres:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox t_nom1 = new TextBox();
+            this.adjuntar_validacion(t_nom1, "texto");
+
+            Label lbl_e_ape1 = new Label() { Text = "Apellidos:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox t_ape1 = new TextBox();
+            this.adjuntar_validacion(t_ape1, "texto");
+
+            Label lbl_e_dni2 = new Label() { Text = "DNI Novia:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox t_dni2 = new TextBox() { Visible = false };
+            this.adjuntar_validacion(t_dni2, "dni");
+
+            Label lbl_e_nom2 = new Label() { Text = "Nombres:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox t_nom2 = new TextBox() { Visible = false };
+            this.adjuntar_validacion(t_nom2, "texto");
+
+            Label lbl_e_ape2 = new Label() { Text = "Apellidos:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox t_ape2 = new TextBox() { Visible = false };
+            this.adjuntar_validacion(t_ape2, "texto");
+
+            this.VincularAutocompletadoReniecSeparado(t_dni1, t_nom1, t_ape1, t_dni2, () => cargandoEdicion);
+            this.VincularAutocompletadoReniecSeparado(t_dni2, t_nom2, t_ape2, t_dni1, () => cargandoEdicion);
+
+            Label lbl_e_est = new Label() { Text = "Estado:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            ComboBox c_est = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130, Font = FuentePx(13.5f) };
+            c_est.Items.AddRange(new string[] { "Inscrito(a)", "Observado", "Finalizado" });
+
+            Label lbl_e_pag = new Label() { Text = "Pago:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            ComboBox c_pag = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 120, Font = FuentePx(13.5f) };
+            c_pag.Items.AddRange(new string[] { "Pagado", "Falta Pagar" });
+
+            TextBox t_deu = new TextBox() { Width = 85 };
+            AsignarPlaceholder(t_deu, "Deuda S/");
+            this.adjuntar_validacion(t_deu, "numero");
+
+            CheckBox chk_e_padrinos = new CheckBox() { Text = "¿Con Padrinos?", Font = FuentePx(13f, FontStyle.Bold), AutoSize = true };
+            Label lbl_e_est_pad = new Label() { Text = "Est. Civil:", Font = FuentePx(13f, FontStyle.Bold), AutoSize = true };
+            ComboBox cb_e_est_pad = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130, Font = FuentePx(13f) };
+            cb_e_est_pad.Items.AddRange(new string[] { "Soltero(a)", "Casado(a)" });
+            cb_e_est_pad.SelectedIndex = 0;
+
+            Panel f_req_edit = new Panel() { Location = new Point(25, 135), Size = new Size(f_edit.ClientSize.Width - 50, 178), BackColor = ColorTranslator.FromHtml("#f8fafc"), BorderStyle = BorderStyle.FixedSingle };
+            Label lblReqEditTit = new Label() { Text = "Requisitos de Documentación:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
+            f_req_edit.Controls.Add(lblReqEditTit);
+
+            for (int i = 0; i < 9; i++)
+            {
+                CheckBox chk = new CheckBox() { Font = FuentePx(13f, FontStyle.Regular), AutoSize = true };
+                this.chks_edit[i] = chk;
+                f_req_edit.Controls.Add(chk);
+            }
+
+            Panel f_obs_izq_edit = new Panel() { BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            Label lblObsGenE = new Label() { Text = "Observación Generada:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
+            TextBox txt_obs_auto_edit = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 32), BackColor = Color.White, Font = FuentePx(13f) };
+            f_obs_izq_edit.Controls.AddRange(new Control[] { lblObsGenE, txt_obs_auto_edit });
+
+            Panel f_obs_der_edit = new Panel() { BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            CheckBox chk_adic_edit = new CheckBox() { Text = "¿Añadir/Ver observación adicional manual?", Font = FuentePx(13f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
+            TextBox txt_obs_adic_edit = new TextBox() { Multiline = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 32), Visible = false, Font = FuentePx(13f) };
+            f_obs_der_edit.Controls.AddRange(new Control[] { chk_adic_edit, txt_obs_adic_edit });
+
+            Label lblFecOf = new Label() { Text = "Fecha Oficial:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            Label lblFecMod = new Label() { Text = "(DD/MM/AAAA)", Font = FuentePx(11.5f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), AutoSize = true };
+            TextBox t_fec = new TextBox() { Width = 125 };
+            this.adjuntar_validacion(t_fec, "fecha");
+
+            Label lblLib = new Label() { Text = "Libro:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox t_l = new TextBox() { Width = 70 };
+            this.adjuntar_validacion(t_l, "registro_libro");
+
+            Label lblFol = new Label() { Text = "Folio:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox t_f = new TextBox() { Width = 70 };
+            this.adjuntar_validacion(t_f, "registro_libro");
+
+            Label lblAsi = new Label() { Text = "Asiento:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox t_a = new TextBox() { Width = 70 };
+            this.adjuntar_validacion(t_a, "registro_libro");
+
+            Button btn_act = CrearBotonAccion("Actualizar Datos", ColorTranslator.FromHtml("#2563eb"), new Point(220, 560), new Size(210, 44), 14.5f);
+            Button btn_eli = CrearBotonAccion("Eliminar Expediente", ColorTranslator.FromHtml("#ef4444"), new Point(460, 560), new Size(210, 44), 14.5f);
+
+            f_edit.Controls.AddRange(new Control[] {
+                lbl_e_dni1, t_dni1, lbl_e_nom1, t_nom1, lbl_e_ape1, t_ape1,
+                lbl_e_dni2, t_dni2, lbl_e_nom2, t_nom2, lbl_e_ape2, t_ape2,
+                lbl_e_est, c_est, lbl_e_pag, c_pag, t_deu, chk_e_padrinos, lbl_e_est_pad, cb_e_est_pad,
+                f_req_edit, f_obs_izq_edit, f_obs_der_edit,
+                lblFecOf, lblFecMod, t_fec, lblLib, t_l, lblFol, t_f, lblAsi, t_a,
+                btn_act, btn_eli
+            });
+            this.content_frame.Controls.Add(f_edit);
+
+            Action ajustarDisenoBuscar = () =>
+            {
+                int anchoDisp = Math.Max(780, this.content_frame.ClientSize.Width - 55);
+                f_top.Width = anchoDisp;
+                tablaResultados.Width = anchoDisp;
+                f_edit.Width = anchoDisp;
+
+                cb_criterio.Location = new Point(lblCriterio.Right + 10, 16);
+                txt_bus_dni.Location = new Point(cb_criterio.Right + 15, 16);
+                txt_bus_ape.Location = new Point(cb_criterio.Right + 15, 16);
+                int derechaCaja = txt_bus_dni.Visible ? txt_bus_dni.Right : txt_bus_ape.Right;
+                btnConsultar.Location = new Point(derechaCaja + 18, 12);
+
+                this.DistribuirFilaPersona(f_edit, 16, true, lbl_e_dni1, t_dni1, lbl_e_nom1, t_nom1, lbl_e_ape1, t_ape1);
+                this.DistribuirFilaPersona(f_edit, 54, true, lbl_e_dni2, t_dni2, lbl_e_nom2, t_nom2, lbl_e_ape2, t_ape2);
+
+                lbl_e_est.Location = new Point(25, 97);
+                c_est.Location = new Point(lbl_e_est.Right + 6, 93);
+                lbl_e_pag.Location = new Point(c_est.Right + 16, 97);
+                c_pag.Location = new Point(lbl_e_pag.Right + 6, 93);
+                t_deu.Location = new Point(c_pag.Right + 10, 93);
+
+                int xPad = t_deu.Visible ? (t_deu.Right + 18) : (c_pag.Right + 20);
+                chk_e_padrinos.Location = new Point(xPad, 95);
+                lbl_e_est_pad.Location = new Point(chk_e_padrinos.Right + 14, 97);
+                cb_e_est_pad.Location = new Point(lbl_e_est_pad.Right + 6, 93);
+
+                f_req_edit.Width = anchoDisp - 50;
+                int mitadReq = Math.Max(340, (f_req_edit.ClientSize.Width - 40) / 2);
+                for (int i = 0; i < 9; i++)
+                {
+                    this.chks_edit[i].Location = new Point(20 + ((i % 2) * mitadReq), 34 + ((i / 2) * 27));
+                }
+
+                int anchoCajaObs = (f_req_edit.Width - 20) / 2;
+                f_obs_izq_edit.Location = new Point(25, 323);
+                f_obs_izq_edit.Size = new Size(anchoCajaObs, 160);
+                txt_obs_auto_edit.Size = new Size(anchoCajaObs - 30, 112);
+
+                f_obs_der_edit.Location = new Point(f_obs_izq_edit.Right + 20, 323);
+                f_obs_der_edit.Size = new Size(anchoCajaObs, 160);
+                txt_obs_adic_edit.Size = new Size(anchoCajaObs - 30, 112);
+
+                lblFecOf.Location = new Point(25, 495);
+                lblFecMod.Location = new Point(25, lblFecOf.Bottom + 1);
+                int xFec = Math.Max(lblFecOf.Right, lblFecMod.Right) + 12;
+                t_fec.Location = new Point(xFec, 502);
+
+                lblLib.Location = new Point(t_fec.Right + 25, 505);
+                t_l.Location = new Point(lblLib.Right + 8, 502);
+
+                lblFol.Location = new Point(t_l.Right + 22, 505);
+                t_f.Location = new Point(lblFol.Right + 8, 502);
+
+                lblAsi.Location = new Point(t_f.Right + 22, 505);
+                t_a.Location = new Point(lblAsi.Right + 8, 502);
+
+                int xBotones = (anchoDisp - 445) / 2;
+                btn_act.Location = new Point(xBotones, 560);
+                btn_eli.Location = new Point(btn_act.Right + 25, 560);
+
+                f_top.Invalidate();
+                f_edit.Invalidate();
+            };
+
+            this.content_frame.Resize += (s, e) => ajustarDisenoBuscar();
 
             cb_criterio.SelectedIndexChanged += (s, e) =>
             {
@@ -1913,156 +2002,8 @@ namespace SIGEP_App
                 txt_bus_ape.Visible = !esDni;
                 txt_bus_dni.Text = "";
                 txt_bus_ape.Text = "";
-                f_top.Invalidate();
+                ajustarDisenoBuscar();
             };
-
-            Button btnConsultar = CrearBotonAccion("Consultar", ColorTranslator.FromHtml("#10b981"), new Point(530, 13), new Size(140, 35));
-
-            f_top.Controls.AddRange(new Control[] { lblCriterio, cb_criterio, txt_bus_dni, txt_bus_ape, btnConsultar });
-            this.content_frame.Controls.Add(f_top);
-
-            DataGridView tablaResultados = new DataGridView();
-            tablaResultados.Location = new Point(40, 125);
-            tablaResultados.Size = new Size(940, 135);
-            tablaResultados.BackgroundColor = Color.White;
-            tablaResultados.BorderStyle = BorderStyle.FixedSingle;
-            tablaResultados.AllowUserToAddRows = false;
-            tablaResultados.ReadOnly = true;
-            tablaResultados.RowHeadersVisible = false;
-            tablaResultados.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            tablaResultados.MultiSelect = false;
-            tablaResultados.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            tablaResultados.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-            tablaResultados.DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
-
-            tablaResultados.Columns.Add("colDni", "DNI");
-            tablaResultados.Columns.Add("colNom", "Nombres");
-            tablaResultados.Columns.Add("colApe", "Apellidos");
-            tablaResultados.Columns.Add("colSac", "Sacramento");
-            tablaResultados.Columns.Add("colEst", "Estado");
-            tablaResultados.Columns.Add("colPag", "Pago");
-
-            this.content_frame.Controls.Add(tablaResultados);
-
-            Panel f_edit = new Panel();
-            f_edit.Location = new Point(40, 270);
-            f_edit.Size = new Size(940, 660);
-            f_edit.BackColor = Color.White;
-            f_edit.BorderStyle = BorderStyle.FixedSingle;
-            f_edit.Visible = false;
-
-            int idx_actual = -1;
-            bool cargandoEdicion = false;
-            bool llenandoTabla = false;
-
-            Label lbl_e_dni1 = new Label() { Text = "DNI Bautizado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 18), Size = new Size(132, 25) };
-            TextBox t_dni1 = new TextBox() { Location = new Point(155, 15), Width = 110 };
-            this.adjuntar_validacion(t_dni1, "dni");
-
-            Label lbl_e_nom1 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(280, 18), AutoSize = true };
-            TextBox t_nom1 = new TextBox() { Location = new Point(355, 15), Width = 215 };
-            this.adjuntar_validacion(t_nom1, "texto");
-
-            Label lbl_e_ape1 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 18), AutoSize = true };
-            TextBox t_ape1 = new TextBox() { Location = new Point(665, 15), Width = 245 };
-            this.adjuntar_validacion(t_ape1, "texto");
-
-            f_edit.Controls.AddRange(new Control[] { lbl_e_dni1, t_dni1, lbl_e_nom1, t_nom1, lbl_e_ape1, t_ape1 });
-
-            Label lbl_e_dni2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 56), Size = new Size(132, 25), Visible = false };
-            TextBox t_dni2 = new TextBox() { Location = new Point(155, 53), Width = 110, Visible = false };
-            this.adjuntar_validacion(t_dni2, "dni");
-
-            Label lbl_e_nom2 = new Label() { Text = "Nombres:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(280, 56), AutoSize = true, Visible = false };
-            TextBox t_nom2 = new TextBox() { Location = new Point(355, 53), Width = 215, Visible = false };
-            this.adjuntar_validacion(t_nom2, "texto");
-
-            Label lbl_e_ape2 = new Label() { Text = "Apellidos:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(585, 56), AutoSize = true, Visible = false };
-            TextBox t_ape2 = new TextBox() { Location = new Point(665, 53), Width = 245, Visible = false };
-            this.adjuntar_validacion(t_ape2, "texto");
-
-            f_edit.Controls.AddRange(new Control[] { lbl_e_dni2, t_dni2, lbl_e_nom2, t_nom2, lbl_e_ape2, t_ape2 });
-
-            this.VincularAutocompletadoReniecSeparado(t_dni1, t_nom1, t_ape1, t_dni2, () => cargandoEdicion);
-            this.VincularAutocompletadoReniecSeparado(t_dni2, t_nom2, t_ape2, t_dni1, () => cargandoEdicion);
-
-            Label lbl_e_est = new Label() { Text = "Estado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 96), AutoSize = true };
-            ComboBox c_est = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(85, 93), Width = 135 };
-            c_est.Items.AddRange(new string[] { "Inscrito(a)", "Observado", "Finalizado" });
-
-            Label lbl_e_pag = new Label() { Text = "Pago:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(235, 96), AutoSize = true };
-            ComboBox c_pag = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(285, 93), Width = 120 };
-            c_pag.Items.AddRange(new string[] { "Pagado", "Falta Pagar" });
-
-            TextBox t_deu = new TextBox() { Location = new Point(415, 93), Width = 85 };
-            AsignarPlaceholder(t_deu, "Deuda S/");
-            this.adjuntar_validacion(t_deu, "numero");
-
-            CheckBox chk_e_padrinos = new CheckBox() { Text = "¿Con Padrinos?", Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), Location = new Point(520, 95), AutoSize = true };
-            Label lbl_e_est_pad = new Label() { Text = "Est. Civil:", Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), Location = new Point(665, 96), AutoSize = true };
-            ComboBox cb_e_est_pad = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(740, 93), Width = 140 };
-            cb_e_est_pad.Items.AddRange(new string[] { "Soltero(a)", "Casado(a)" });
-            cb_e_est_pad.SelectedIndex = 0;
-
-            f_edit.Controls.AddRange(new Control[] { lbl_e_est, c_est, lbl_e_pag, c_pag, t_deu, chk_e_padrinos, lbl_e_est_pad, cb_e_est_pad });
-
-            Panel f_req_edit = new Panel();
-            f_req_edit.Location = new Point(20, 135);
-            f_req_edit.Size = new Size(890, 180);
-            f_req_edit.BackColor = ColorTranslator.FromHtml("#f8fafc");
-            f_req_edit.BorderStyle = BorderStyle.FixedSingle;
-
-            Label lblReqEditTit = new Label() { Text = "Requisitos de Documentación:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
-            f_req_edit.Controls.Add(lblReqEditTit);
-
-            for (int i = 0; i < 9; i++)
-            {
-                CheckBox chk = new CheckBox();
-                chk.AutoSize = true;
-                int col = i % 2;
-                int fila = i / 2;
-                chk.Location = new Point(20 + (col * 430), 34 + (fila * 27));
-                this.chks_edit[i] = chk;
-                f_req_edit.Controls.Add(chk);
-            }
-            f_edit.Controls.Add(f_req_edit);
-
-            Panel f_obs_izq_edit = new Panel() { Location = new Point(20, 325), Size = new Size(435, 160), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
-            Label lblObsGenE = new Label() { Text = "Observación Generada:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
-            TextBox txt_obs_auto_edit = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 32), Size = new Size(405, 112), BackColor = Color.White };
-            f_obs_izq_edit.Controls.AddRange(new Control[] { lblObsGenE, txt_obs_auto_edit });
-            f_edit.Controls.Add(f_obs_izq_edit);
-
-            Panel f_obs_der_edit = new Panel() { Location = new Point(475, 325), Size = new Size(435, 160), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
-            CheckBox chk_adic_edit = new CheckBox() { Text = "¿Añadir/Ver observación adicional manual?", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 8), AutoSize = true };
-            TextBox txt_obs_adic_edit = new TextBox() { Multiline = true, ScrollBars = ScrollBars.Vertical, Location = new Point(15, 32), Size = new Size(405, 112), Visible = false };
-            f_obs_der_edit.Controls.AddRange(new Control[] { chk_adic_edit, txt_obs_adic_edit });
-            f_edit.Controls.Add(f_obs_der_edit);
-
-            Label lblFecOf = new Label() { Text = "Fecha Oficial:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(20, 495), AutoSize = true };
-            Label lblFecMod = new Label() { Text = "(DD/MM/AAAA)", Font = new Font("Segoe UI", 8.5f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), Location = new Point(20, 515), AutoSize = true };
-            TextBox t_fec = new TextBox() { Location = new Point(135, 502), Width = 135 };
-            this.adjuntar_validacion(t_fec, "fecha");
-
-            Label lblLib = new Label() { Text = "Libro:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(300, 505), AutoSize = true };
-            TextBox t_l = new TextBox() { Location = new Point(355, 502), Width = 75 };
-            this.adjuntar_validacion(t_l, "registro_libro");
-
-            Label lblFol = new Label() { Text = "Folio:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(460, 505), AutoSize = true };
-            TextBox t_f = new TextBox() { Location = new Point(515, 502), Width = 75 };
-            this.adjuntar_validacion(t_f, "registro_libro");
-
-            Label lblAsi = new Label() { Text = "Asiento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(620, 505), AutoSize = true };
-            TextBox t_a = new TextBox() { Location = new Point(690, 502), Width = 75 };
-            this.adjuntar_validacion(t_a, "registro_libro");
-
-            f_edit.Controls.AddRange(new Control[] { lblFecOf, lblFecMod, t_fec, lblLib, t_l, lblFol, t_f, lblAsi, t_a });
-
-            Button btn_act = CrearBotonAccion("Actualizar Datos", ColorTranslator.FromHtml("#2563eb"), new Point(250, 560), new Size(210, 44), 11f);
-            Button btn_eli = CrearBotonAccion("Eliminar Expediente", ColorTranslator.FromHtml("#ef4444"), new Point(485, 560), new Size(210, 44), 11f);
-
-            f_edit.Controls.AddRange(new Control[] { btn_act, btn_eli });
-            this.content_frame.Controls.Add(f_edit);
 
             Action actualizar_obs_auto_edit = () =>
             {
@@ -2077,27 +2018,18 @@ namespace SIGEP_App
                 {
                     if (!this.chks_edit[j].Checked)
                     {
-                        string texto_limpio = this.chks_edit[j].Text.Substring(3);
-                        faltantes[cantFaltantes] = texto_limpio;
-                        cantFaltantes++;
+                        faltantes[cantFaltantes++] = this.chks_edit[j].Text.Substring(3);
                     }
                 }
 
-                string texto = "";
-                if (cantFaltantes > 0)
-                {
-                    texto = "Faltan los siguientes documentos físicos:\r\n- " + this.UnirArregloConSeparador(faltantes, cantFaltantes, "\r\n- ") + "\r\n";
-                }
-                else
-                {
-                    texto = "Documentación física completa.\r\n";
-                }
+                string texto = (cantFaltantes > 0)
+                    ? "Faltan los siguientes documentos físicos:\r\n- " + this.UnirArregloConSeparador(faltantes, cantFaltantes, "\r\n- ") + "\r\n"
+                    : "Documentación física completa.\r\n";
 
                 if (c_pag.SelectedItem != null && c_pag.SelectedItem.ToString() == "Falta Pagar")
                 {
-                    texto = texto + "Pendiente de pago por regularizar.";
+                    texto += "Pendiente de pago por regularizar.";
                 }
-
                 txt_obs_auto_edit.Text = texto.Trim();
 
                 if (cantFaltantes == 0 && c_pag.SelectedItem != null && c_pag.SelectedItem.ToString() == "Pagado")
@@ -2146,6 +2078,7 @@ namespace SIGEP_App
                         this.chks_edit[k].Checked = false;
                     }
                 }
+                ajustarDisenoBuscar();
                 actualizar_obs_auto_edit();
             };
 
@@ -2183,18 +2116,15 @@ namespace SIGEP_App
                     t_deu.Visible = false;
                     t_deu.Text = "";
                 }
+                ajustarDisenoBuscar();
                 actualizar_obs_auto_edit();
             };
 
             chk_adic_edit.CheckedChanged += (s, e) =>
             {
-                if (chk_adic_edit.Checked)
+                txt_obs_adic_edit.Visible = chk_adic_edit.Checked;
+                if (!chk_adic_edit.Checked)
                 {
-                    txt_obs_adic_edit.Visible = true;
-                }
-                else
-                {
-                    txt_obs_adic_edit.Visible = false;
                     txt_obs_adic_edit.Text = "";
                 }
             };
@@ -2241,47 +2171,18 @@ namespace SIGEP_App
                 }
 
                 chk_e_padrinos.Checked = (this.db.tiene_padrinos[idx] == "SI");
-                if (this.db.estado_padrinos[idx] == "Casado(a)")
-                {
-                    cb_e_est_pad.SelectedItem = "Casado(a)";
-                }
-                else
-                {
-                    cb_e_est_pad.SelectedItem = "Soltero(a)";
-                }
+                cb_e_est_pad.SelectedItem = (this.db.estado_padrinos[idx] == "Casado(a)") ? "Casado(a)" : "Soltero(a)";
 
                 reconstruir_requisitos_edicion();
 
                 string[] memoria = this.db.checks_mem[idx].Split(new char[] { '-', ',' }, StringSplitOptions.RemoveEmptyEntries);
                 for (int k = 0; k < this.reqs_activos_edit; k++)
                 {
-                    if (k < memoria.Length && memoria[k] == "1")
-                    {
-                        this.chks_edit[k].Checked = true;
-                    }
-                    else
-                    {
-                        this.chks_edit[k].Checked = false;
-                    }
+                    this.chks_edit[k].Checked = (k < memoria.Length && memoria[k] == "1");
                 }
 
-                if (c_est.Items.Contains(this.db.estados[idx]))
-                {
-                    c_est.SelectedItem = this.db.estados[idx];
-                }
-                else
-                {
-                    c_est.SelectedIndex = 0;
-                }
-
-                if (c_pag.Items.Contains(this.db.pagos[idx]))
-                {
-                    c_pag.SelectedItem = this.db.pagos[idx];
-                }
-                else
-                {
-                    c_pag.SelectedIndex = 0;
-                }
+                c_est.SelectedItem = c_est.Items.Contains(this.db.estados[idx]) ? this.db.estados[idx] : c_est.Items[0];
+                c_pag.SelectedItem = c_pag.Items.Contains(this.db.pagos[idx]) ? this.db.pagos[idx] : c_pag.Items[0];
 
                 if (this.db.pagos[idx] == "Pagado")
                 {
@@ -2313,8 +2214,8 @@ namespace SIGEP_App
                 t_a.Text = (this.db.asientos[idx] != "---") ? this.db.asientos[idx] : "";
 
                 cargandoEdicion = false;
+                ajustarDisenoBuscar();
                 actualizar_obs_auto_edit();
-                f_edit.Invalidate();
             };
 
             Action<int[], bool> poblarTablaResultados = (indices, mostrarMensaje) =>
@@ -2335,14 +2236,7 @@ namespace SIGEP_App
                         apeMostrar = this.db.apellidos[idx] + " / " + this.db.apellidos_sec[idx];
                     }
 
-                    int filaIdx = tablaResultados.Rows.Add(
-                        dniMostrar,
-                        nomMostrar,
-                        apeMostrar,
-                        this.db.tipos[idx],
-                        this.db.estados[idx],
-                        this.db.pagos[idx]
-                    );
+                    int filaIdx = tablaResultados.Rows.Add(dniMostrar, nomMostrar, apeMostrar, this.db.tipos[idx], this.db.estados[idx], this.db.pagos[idx]);
                     tablaResultados.Rows[filaIdx].Tag = idx;
                 }
                 llenandoTabla = false;
@@ -2370,8 +2264,7 @@ namespace SIGEP_App
             {
                 if (!llenandoTabla && e.RowIndex >= 0 && tablaResultados.Rows[e.RowIndex].Tag != null)
                 {
-                    int idxSel = (int)tablaResultados.Rows[e.RowIndex].Tag;
-                    cargarExpedienteEnEditor(idxSel);
+                    cargarExpedienteEnEditor((int)tablaResultados.Rows[e.RowIndex].Tag);
                 }
             };
 
@@ -2444,24 +2337,10 @@ namespace SIGEP_App
             };
 
             btnConsultar.Click += (s, e) => ejecutarBusqueda(true);
+            txt_bus_dni.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ejecutarBusqueda(true); } };
+            txt_bus_ape.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ejecutarBusqueda(true); } };
 
-            txt_bus_dni.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter)
-                {
-                    e.SuppressKeyPress = true;
-                    ejecutarBusqueda(true);
-                }
-            };
-
-            txt_bus_ape.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter)
-                {
-                    e.SuppressKeyPress = true;
-                    ejecutarBusqueda(true);
-                }
-            };
+            ajustarDisenoBuscar();
 
             btn_act.Click += (s, e) =>
             {
@@ -2485,14 +2364,9 @@ namespace SIGEP_App
                     MessageBox.Show("El " + this.ObtenerEtiquetaDniPorSacramento(tipo_actual).Replace(":", "") + " debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                if (!this.EsNombreValido(nom1_val))
+                if (!this.EsNombreValido(nom1_val) || !this.EsNombreValido(ape1_val))
                 {
-                    MessageBox.Show("Los Nombres del titular deben contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                if (!this.EsNombreValido(ape1_val))
-                {
-                    MessageBox.Show("Los Apellidos del titular deben contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Los Nombres y Apellidos del titular deben contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -2720,60 +2594,63 @@ namespace SIGEP_App
         {
             this.limpiar_contenido();
 
-            Label lblTit = new Label();
-            lblTit.Text = "Reporte General de Expedientes";
-            lblTit.Font = new Font("Segoe UI", 20f, FontStyle.Bold);
-            lblTit.ForeColor = ColorTranslator.FromHtml("#2563eb");
-            lblTit.Location = new Point(40, 15);
-            lblTit.AutoSize = true;
+            Label lblTit = new Label() { Text = "Reporte General de Expedientes", Font = FuentePx(24f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#2563eb"), Location = new Point(25, 15), AutoSize = true };
             this.content_frame.Controls.Add(lblTit);
 
-            Panel f_filtros = new Panel();
-            f_filtros.Location = new Point(40, 60);
-            f_filtros.Size = new Size(940, 65);
-            f_filtros.BackColor = ColorTranslator.FromHtml("#f1f5f9");
-            f_filtros.BorderStyle = BorderStyle.FixedSingle;
+            Panel f_filtros = new Panel() { Location = new Point(25, lblTit.Bottom + 10), Size = new Size(Math.Max(780, this.content_frame.ClientSize.Width - 55), 66), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
 
-            Label lblSac = new Label() { Text = "Sacramento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(15, 22), AutoSize = true };
-            ComboBox cb_filtro_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(110, 19), Width = 150 };
+            Label lblSac = new Label() { Text = "Sacramento:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 22), AutoSize = true };
+            ComboBox cb_filtro_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145, Font = FuentePx(13.5f) };
             cb_filtro_sac.Items.AddRange(new string[] { "Todos", "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
             cb_filtro_sac.SelectedItem = "Todos";
 
-            Label lblFecOf = new Label() { Text = "Fecha Oficial:\n(DD/MM/AAAA)", Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), Location = new Point(280, 12), AutoSize = true };
-            TextBox txt_filtro_fec = new TextBox() { Location = new Point(400, 19), Width = 110 };
+            Label lblFecOf = new Label() { Text = "Fecha Oficial:\n(DD/MM/AAAA)", Font = FuentePx(12.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_filtro_fec = new TextBox() { Width = 105 };
             this.adjuntar_validacion(txt_filtro_fec, "fecha");
 
-            Label lblOrd = new Label() { Text = "Ordenar:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(530, 22), AutoSize = true };
-            ComboBox cb_orden = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(600, 19), Width = 150 };
+            Label lblOrd = new Label() { Text = "Ordenar:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            ComboBox cb_orden = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145, Font = FuentePx(13.5f) };
             cb_orden.Items.AddRange(new string[] { "Ascendente (A-Z)", "Descendente (Z-A)" });
             cb_orden.SelectedItem = "Ascendente (A-Z)";
 
-            Button btnFiltrar = CrearBotonAccion("Aplicar Filtros", ColorTranslator.FromHtml("#2563eb"), new Point(770, 15), new Size(140, 34));
+            Button btnFiltrar = CrearBotonAccion("Aplicar Filtros", ColorTranslator.FromHtml("#2563eb"), new Point(740, 14), new Size(135, 36));
 
             f_filtros.Controls.AddRange(new Control[] { lblSac, cb_filtro_sac, lblFecOf, txt_filtro_fec, lblOrd, cb_orden, btnFiltrar });
             this.content_frame.Controls.Add(f_filtros);
 
-            DataGridView tabla = new DataGridView();
-            tabla.Location = new Point(40, 140);
-            tabla.Size = new Size(940, 420);
-            tabla.BackgroundColor = Color.White;
-            tabla.BorderStyle = BorderStyle.FixedSingle;
-            tabla.AllowUserToAddRows = false;
-            tabla.ReadOnly = true;
-            tabla.RowHeadersVisible = false;
-            tabla.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            tabla.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            tabla.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
-            tabla.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            tabla.DefaultCellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Regular);
-
+            DataGridView tabla = new DataGridView() { Location = new Point(25, f_filtros.Bottom + 12), Size = new Size(f_filtros.Width, 420) };
+            this.ConfigurarTablaResponsiva(tabla);
             tabla.Columns.Add("colTit", "Titular(es)");
             tabla.Columns.Add("colSac", "Sacramento");
             tabla.Columns.Add("colFec", "Fecha Oficial");
             tabla.Columns.Add("colEst", "Estado");
             tabla.Columns.Add("colDeu", "Deuda");
-
             this.content_frame.Controls.Add(tabla);
+
+            Button btnExportar = CrearBotonAccion("Exportar Resumen PDF", ColorTranslator.FromHtml("#10b981"), new Point(350, 575), new Size(250, 44), 15f);
+            this.content_frame.Controls.Add(btnExportar);
+
+            Action ajustarDisenoReportes = () =>
+            {
+                int anchoDisp = Math.Max(780, this.content_frame.ClientSize.Width - 55);
+                int altoDisp = Math.Max(260, this.content_frame.ClientSize.Height - tabla.Top - 85);
+
+                f_filtros.Width = anchoDisp;
+                tabla.Size = new Size(anchoDisp, altoDisp);
+
+                cb_filtro_sac.Location = new Point(lblSac.Right + 8, 18);
+                lblFecOf.Location = new Point(cb_filtro_sac.Right + 16, 13);
+                txt_filtro_fec.Location = new Point(lblFecOf.Right + 8, 19);
+                lblOrd.Location = new Point(txt_filtro_fec.Right + 16, 22);
+                cb_orden.Location = new Point(lblOrd.Right + 8, 18);
+                btnFiltrar.Location = new Point(cb_orden.Right + 16, 14);
+
+                btnExportar.Location = new Point(25 + (anchoDisp - btnExportar.Width) / 2, tabla.Bottom + 15);
+                f_filtros.Invalidate();
+            };
+
+            this.content_frame.Resize += (s, e) => ajustarDisenoReportes();
+            ajustarDisenoReportes();
 
             Action<bool> actualizar_tabla = (validarFiltro) =>
             {
@@ -2820,11 +2697,7 @@ namespace SIGEP_App
 
                     string texto_est = this.db.estados[i] + "\n(" + this.db.pagos[i] + ")";
                     string deuda_val = this.db.deudas[i];
-                    string texto_deuda = "No tiene deuda";
-                    if (deuda_val != "0" && deuda_val != "")
-                    {
-                        texto_deuda = "S/ " + deuda_val;
-                    }
+                    string texto_deuda = (deuda_val != "0" && deuda_val != "") ? ("S/ " + deuda_val) : "No tiene deuda";
 
                     int rowIdx = tabla.Rows.Add(nombre_display, this.db.tipos[i], this.db.fechas_sac[i], texto_est, texto_deuda);
 
@@ -2841,14 +2714,9 @@ namespace SIGEP_App
                         tabla.Rows[rowIdx].Cells[3].Style.ForeColor = ColorTranslator.FromHtml("#ef4444");
                     }
 
-                    if (texto_deuda == "No tiene deuda")
-                    {
-                        tabla.Rows[rowIdx].Cells[4].Style.ForeColor = ColorTranslator.FromHtml("#10b981");
-                    }
-                    else
-                    {
-                        tabla.Rows[rowIdx].Cells[4].Style.ForeColor = ColorTranslator.FromHtml("#ef4444");
-                    }
+                    tabla.Rows[rowIdx].Cells[4].Style.ForeColor = (texto_deuda == "No tiene deuda")
+                        ? ColorTranslator.FromHtml("#10b981")
+                        : ColorTranslator.FromHtml("#ef4444");
                 }
 
                 if (validarFiltro && tabla.Rows.Count == 0)
@@ -2859,8 +2727,6 @@ namespace SIGEP_App
 
             btnFiltrar.Click += (s, e) => actualizar_tabla(true);
             actualizar_tabla(false);
-
-            Button btnExportar = CrearBotonAccion("Exportar Resumen PDF", ColorTranslator.FromHtml("#10b981"), new Point(385, 580), new Size(250, 44), 12f);
 
             btnExportar.Click += (s, e) =>
             {
@@ -2904,11 +2770,7 @@ namespace SIGEP_App
                     }
 
                     string deuda_val = this.db.deudas[i];
-                    string texto_deuda = "No tiene deuda";
-                    if (deuda_val != "0" && deuda_val != "")
-                    {
-                        texto_deuda = "S/ " + deuda_val;
-                    }
+                    string texto_deuda = (deuda_val != "0" && deuda_val != "") ? ("S/ " + deuda_val) : "No tiene deuda";
 
                     ItemReporte item = new ItemReporte();
                     item.nom = nom;
@@ -2916,8 +2778,7 @@ namespace SIGEP_App
                     item.dni = this.db.dnis_prin[i];
                     item.est = this.db.estados[i];
                     item.deuda = texto_deuda;
-                    filtrados[cantFiltrados] = item;
-                    cantFiltrados++;
+                    filtrados[cantFiltrados++] = item;
                 }
 
                 if (cantFiltrados == 0)
@@ -2936,103 +2797,131 @@ namespace SIGEP_App
                     MessageBox.Show("Reporte exportado correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             };
-
-            this.content_frame.Controls.Add(btnExportar);
         }
 
-        // ================= 8. OPCIONES AVANZADAS: CONSTANCIAS ANTIGUAS (SIN TABLA) =================
+        // ================= 8. OPCIONES AVANZADAS: CONSTANCIAS ANTIGUAS =================
         private void mostrar_opciones_avanzadas()
         {
             this.limpiar_contenido();
 
-            Label lblTit = new Label();
-            lblTit.Text = "Opciones Avanzadas - Constancias Antiguas";
-            lblTit.Font = new Font("Segoe UI", 20f, FontStyle.Bold);
-            lblTit.ForeColor = ColorTranslator.FromHtml("#2563eb");
-            lblTit.Location = new Point(40, 15);
-            lblTit.AutoSize = true;
+            Label lblTit = new Label() { Text = "Opciones Avanzadas - Constancias Antiguas", Font = FuentePx(24f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#2563eb"), Location = new Point(25, 15), AutoSize = true };
             this.content_frame.Controls.Add(lblTit);
 
-            Label lblSub = new Label();
-            lblSub.Text = "Registro, edición y eliminación de constancias inscritas anteriormente (Con DNI o Sin DNI)";
-            lblSub.Font = new Font("Segoe UI", 10.5f, FontStyle.Regular);
-            lblSub.ForeColor = ColorTranslator.FromHtml("#64748b");
-            lblSub.Location = new Point(40, 50);
-            lblSub.AutoSize = true;
+            Label lblSub = new Label() { Text = "Registro, edición y eliminación de constancias inscritas anteriormente (Con DNI o Sin DNI)", Font = FuentePx(14f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), Location = new Point(25, lblTit.Bottom + 6), AutoSize = true };
             this.content_frame.Controls.Add(lblSub);
 
-            Panel f_form = new Panel();
-            f_form.Location = new Point(40, 80);
-            f_form.Size = new Size(940, 290);
-            f_form.BackColor = Color.White;
-            f_form.BorderStyle = BorderStyle.FixedSingle;
+            Panel f_form = new Panel() { Location = new Point(25, lblSub.Bottom + 15), Size = new Size(Math.Max(780, this.content_frame.ClientSize.Width - 55), 295), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
 
             int idx_hist_seleccionado = -1;
             bool cargandoExistente = false;
 
-            Label lblSac = new Label() { Text = "Sacramento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 20), AutoSize = true };
-            ComboBox cb_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(160, 17), Width = 190 };
+            Label lblSac = new Label() { Text = "Sacramento:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(25, 22), AutoSize = true };
+            ComboBox cb_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 190, Font = FuentePx(13.5f) };
             cb_sac.Items.AddRange(new string[] { "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
 
-            Label lblModoDni = new Label() { Text = "Tipo Registro:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(385, 20), AutoSize = true };
-            ComboBox cb_modo_dni = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(495, 17), Width = 150 };
+            Label lblModoDni = new Label() { Text = "Tipo Registro:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            ComboBox cb_modo_dni = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150, Font = FuentePx(13.5f) };
             cb_modo_dni.Items.AddRange(new string[] { "Con DNI", "Sin DNI" });
 
-            f_form.Controls.AddRange(new Control[] { lblSac, cb_sac, lblModoDni, cb_modo_dni });
-
-            Label lblDni1 = new Label() { Text = "DNI Bautizado:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 65), Size = new Size(132, 25) };
-            TextBox txt_dni1 = new TextBox() { Location = new Point(160, 62), Width = 110 };
+            Label lblDni1 = new Label() { Text = "DNI Bautizado:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_dni1 = new TextBox();
             this.adjuntar_validacion(txt_dni1, "dni");
 
-            Label lblNom1 = new Label() { Text = "Nombre:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(285, 65), Size = new Size(70, 25) };
-            TextBox txt_nom1 = new TextBox() { Location = new Point(360, 62), Width = 215 };
+            Label lblNom1 = new Label() { Text = "Nombre:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_nom1 = new TextBox();
             AsignarPlaceholder(txt_nom1, "NOMBRES");
             this.adjuntar_validacion(txt_nom1, "texto");
 
-            Label lblApe1 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(590, 65), Size = new Size(70, 25) };
-            TextBox txt_ape1 = new TextBox() { Location = new Point(665, 62), Width = 240 };
+            Label lblApe1 = new Label() { Text = "Apellido:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_ape1 = new TextBox();
             AsignarPlaceholder(txt_ape1, "APELLIDOS");
             this.adjuntar_validacion(txt_ape1, "texto");
 
-            f_form.Controls.AddRange(new Control[] { lblDni1, txt_dni1, lblNom1, txt_nom1, lblApe1, txt_ape1 });
-
-            Label lblDni2 = new Label() { Text = "DNI Novia:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 108), Size = new Size(132, 25), Visible = false };
-            TextBox txt_dni2 = new TextBox() { Location = new Point(160, 105), Width = 110, Visible = false };
+            Label lblDni2 = new Label() { Text = "DNI Novia:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox txt_dni2 = new TextBox() { Visible = false };
             this.adjuntar_validacion(txt_dni2, "dni");
 
-            Label lblNom2 = new Label() { Text = "Nombre:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(285, 108), Size = new Size(70, 25), Visible = false };
-            TextBox txt_nom2 = new TextBox() { Location = new Point(360, 105), Width = 215, Visible = false };
+            Label lblNom2 = new Label() { Text = "Nombre:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox txt_nom2 = new TextBox() { Visible = false };
             AsignarPlaceholder(txt_nom2, "NOMBRES NOVIA");
             this.adjuntar_validacion(txt_nom2, "texto");
 
-            Label lblApe2 = new Label() { Text = "Apellido:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(590, 108), Size = new Size(70, 25), Visible = false };
-            TextBox txt_ape2 = new TextBox() { Location = new Point(665, 105), Width = 240, Visible = false };
+            Label lblApe2 = new Label() { Text = "Apellido:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
+            TextBox txt_ape2 = new TextBox() { Visible = false };
             AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
             this.adjuntar_validacion(txt_ape2, "texto");
-
-            f_form.Controls.AddRange(new Control[] { lblDni2, txt_dni2, lblNom2, txt_nom2, lblApe2, txt_ape2 });
 
             this.VincularAutocompletadoReniecSeparado(txt_dni1, txt_nom1, txt_ape1, txt_dni2, () => cargandoExistente);
             this.VincularAutocompletadoReniecSeparado(txt_dni2, txt_nom2, txt_ape2, txt_dni1, () => cargandoExistente);
 
-            Label lblFec = new Label() { Text = "Fecha:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(25, 148), AutoSize = true };
-            Label lblFecModH = new Label() { Text = "(DD/MM/AAAA)", Font = new Font("Segoe UI", 8.5f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), Location = new Point(25, 168), AutoSize = true };
-            TextBox txt_fec = new TextBox() { Location = new Point(160, 155), Width = 130 };
+            Label lblFec = new Label() { Text = "Fecha:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            Label lblFecModH = new Label() { Text = "(DD/MM/AAAA)", Font = FuentePx(11.5f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), AutoSize = true };
+            TextBox txt_fec = new TextBox() { Width = 130 };
             this.adjuntar_validacion(txt_fec, "fecha");
 
-            Label lblLib = new Label() { Text = "Libro:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(315, 158), AutoSize = true };
-            TextBox txt_lib = new TextBox() { Location = new Point(370, 155), Width = 90 };
+            Label lblLib = new Label() { Text = "Libro:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_lib = new TextBox() { Width = 85 };
             this.adjuntar_validacion(txt_lib, "registro_libro");
 
-            Label lblFol = new Label() { Text = "Folio:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(490, 158), AutoSize = true };
-            TextBox txt_fol = new TextBox() { Location = new Point(545, 155), Width = 90 };
+            Label lblFol = new Label() { Text = "Folio:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_fol = new TextBox() { Width = 85 };
             this.adjuntar_validacion(txt_fol, "registro_libro");
 
-            Label lblAsi = new Label() { Text = "Asiento:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), Location = new Point(665, 158), AutoSize = true };
-            TextBox txt_asi = new TextBox() { Location = new Point(735, 155), Width = 90 };
+            Label lblAsi = new Label() { Text = "Asiento:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_asi = new TextBox() { Width = 85 };
             this.adjuntar_validacion(txt_asi, "registro_libro");
 
-            f_form.Controls.AddRange(new Control[] { lblFec, lblFecModH, txt_fec, lblLib, txt_lib, lblFol, txt_fol, lblAsi, txt_asi });
+            Button btnRegistrar = CrearBotonAccion("Registrar", ColorTranslator.FromHtml("#2563eb"), new Point(25, 222), new Size(185, 42), 14f);
+            Button btnEditar = CrearBotonAccion("Editar / Actualizar", ColorTranslator.FromHtml("#10b981"), new Point(230, 222), new Size(185, 42), 14f);
+            Button btnEliminar = CrearBotonAccion("Eliminar", ColorTranslator.FromHtml("#ef4444"), new Point(435, 222), new Size(185, 42), 14f);
+            Button btnLimpiar = CrearBotonAccion("Limpiar Campos", ColorTranslator.FromHtml("#64748b"), new Point(640, 222), new Size(185, 42), 14f);
+
+            f_form.Controls.AddRange(new Control[] {
+                lblSac, cb_sac, lblModoDni, cb_modo_dni,
+                lblDni1, txt_dni1, lblNom1, txt_nom1, lblApe1, txt_ape1,
+                lblDni2, txt_dni2, lblNom2, txt_nom2, lblApe2, txt_ape2,
+                lblFec, lblFecModH, txt_fec, lblLib, txt_lib, lblFol, txt_fol, lblAsi, txt_asi,
+                btnRegistrar, btnEditar, btnEliminar, btnLimpiar
+            });
+            this.content_frame.Controls.Add(f_form);
+
+            Action ajustarDisenoAvanzadas = () =>
+            {
+                int anchoDisp = Math.Max(780, this.content_frame.ClientSize.Width - 55);
+                f_form.Width = anchoDisp;
+
+                cb_sac.Location = new Point(lblSac.Right + 12, 18);
+                lblModoDni.Location = new Point(cb_sac.Right + 35, 22);
+                cb_modo_dni.Location = new Point(lblModoDni.Right + 12, 18);
+
+                bool conDni = (cb_modo_dni.SelectedItem == null || cb_modo_dni.SelectedItem.ToString() == "Con DNI");
+                this.DistribuirFilaPersona(f_form, 62, conDni, lblDni1, txt_dni1, lblNom1, txt_nom1, lblApe1, txt_ape1);
+                this.DistribuirFilaPersona(f_form, 105, conDni, lblDni2, txt_dni2, lblNom2, txt_nom2, lblApe2, txt_ape2);
+
+                lblFec.Location = new Point(25, 148);
+                lblFecModH.Location = new Point(25, lblFec.Bottom + 1);
+                int xFec = Math.Max(lblFec.Right, lblFecModH.Right) + 12;
+                txt_fec.Location = new Point(xFec, 154);
+
+                lblLib.Location = new Point(txt_fec.Right + 28, 158);
+                txt_lib.Location = new Point(lblLib.Right + 8, 154);
+
+                lblFol.Location = new Point(txt_lib.Right + 25, 158);
+                txt_fol.Location = new Point(lblFol.Right + 8, 154);
+
+                lblAsi.Location = new Point(txt_fol.Right + 25, 158);
+                txt_asi.Location = new Point(lblAsi.Right + 8, 154);
+
+                int espacioBtns = Math.Max(15, (anchoDisp - 50 - (4 * 185)) / 3);
+                btnRegistrar.Location = new Point(25, 222);
+                btnEditar.Location = new Point(btnRegistrar.Right + espacioBtns, 222);
+                btnEliminar.Location = new Point(btnEditar.Right + espacioBtns, 222);
+                btnLimpiar.Location = new Point(btnEliminar.Right + espacioBtns, 222);
+
+                f_form.Invalidate();
+            };
+
+            this.content_frame.Resize += (s, e) => ajustarDisenoAvanzadas();
 
             Action buscarConstanciaExistente = () =>
             {
@@ -3135,7 +3024,7 @@ namespace SIGEP_App
                     txt_nom2.Text = "";
                     txt_ape2.Text = "";
                 }
-                f_form.Invalidate();
+                ajustarDisenoAvanzadas();
                 buscarConstanciaExistente();
             };
 
@@ -3144,14 +3033,7 @@ namespace SIGEP_App
 
             cb_sac.SelectedItem = "Bautizo";
             cb_modo_dni.SelectedItem = "Con DNI";
-
-            Button btnRegistrar = CrearBotonAccion("Registrar", ColorTranslator.FromHtml("#2563eb"), new Point(25, 220), new Size(205, 42), 10.5f);
-            Button btnEditar = CrearBotonAccion("Editar / Actualizar", ColorTranslator.FromHtml("#10b981"), new Point(250, 220), new Size(205, 42), 10.5f);
-            Button btnEliminar = CrearBotonAccion("Eliminar", ColorTranslator.FromHtml("#ef4444"), new Point(475, 220), new Size(205, 42), 10.5f);
-            Button btnLimpiar = CrearBotonAccion("Limpiar Campos", ColorTranslator.FromHtml("#64748b"), new Point(700, 220), new Size(205, 42), 10.5f);
-
-            f_form.Controls.AddRange(new Control[] { btnRegistrar, btnEditar, btnEliminar, btnLimpiar });
-            this.content_frame.Controls.Add(f_form);
+            ajustarDisenoAvanzadas();
 
             Action limpiarCamposHist = () =>
             {
@@ -3196,12 +3078,9 @@ namespace SIGEP_App
                 string[] errores = new string[20];
                 int cantErrores = 0;
 
-                if (conDni)
+                if (conDni && (d1.Length != 8 || d1 == "00000000"))
                 {
-                    if (d1.Length != 8 || d1 == "00000000")
-                    {
-                        errores[cantErrores++] = "- El " + this.ObtenerEtiquetaDniPorSacramento(sac).Replace(":", "") + " debe tener exactamente 8 dígitos numéricos válidos.";
-                    }
+                    errores[cantErrores++] = "- El " + this.ObtenerEtiquetaDniPorSacramento(sac).Replace(":", "") + " debe tener exactamente 8 dígitos numéricos válidos.";
                 }
                 if (!this.EsNombreValido(n1))
                 {
@@ -3225,13 +3104,9 @@ namespace SIGEP_App
                             errores[cantErrores++] = "- No puede ingresar 2 DNIs iguales. Los DNIs de los esposos deben ser diferentes.";
                         }
                     }
-                    if (!this.EsNombreValido(n2))
+                    if (!this.EsNombreValido(n2) || !this.EsNombreValido(a2))
                     {
-                        errores[cantErrores++] = "- El Nombre de la Novia es obligatorio.";
-                    }
-                    if (!this.EsNombreValido(a2))
-                    {
-                        errores[cantErrores++] = "- El Apellido de la Novia es obligatorio.";
+                        errores[cantErrores++] = "- El Nombre y Apellido de la Novia son obligatorios.";
                     }
                     if (n1 != "" && a1 != "" && (n1 + " " + a1) == (n2 + " " + a2))
                     {
@@ -3329,40 +3204,11 @@ namespace SIGEP_App
                 string n1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom1.Text), @"\s+", " ");
                 string a1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape1.Text), @"\s+", " ");
 
-                string d2 = "---";
-                string n2 = "---";
-                string a2 = "---";
+                string d2 = (sac == "Matrimonio") ? (conDni ? txt_dni2.Text.Trim() : "SIN DNI") : "---";
+                string n2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom2.Text), @"\s+", " ") : "---";
+                string a2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape2.Text), @"\s+", " ") : "---";
 
-                if (sac == "Matrimonio")
-                {
-                    d2 = conDni ? txt_dni2.Text.Trim() : "SIN DNI";
-                    n2 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom2.Text), @"\s+", " ");
-                    a2 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape2.Text), @"\s+", " ");
-                }
-
-                this.db.registrar(
-                    "ANTIGUO",
-                    d1,
-                    n1,
-                    a1,
-                    d2,
-                    n2,
-                    a2,
-                    "N/A",
-                    sac,
-                    "Finalizado",
-                    "NO",
-                    "---",
-                    "1-1-1",
-                    "Constancia histórica registrada.",
-                    "",
-                    txt_fec.Text.Trim(),
-                    txt_lib.Text.Trim(),
-                    txt_fol.Text.Trim(),
-                    txt_asi.Text.Trim(),
-                    "Pagado",
-                    "0"
-                );
+                this.db.registrar("ANTIGUO", d1, n1, a1, d2, n2, a2, "N/A", sac, "Finalizado", "NO", "---", "1-1-1", "Constancia histórica registrada.", "", txt_fec.Text.Trim(), txt_lib.Text.Trim(), txt_fol.Text.Trim(), txt_asi.Text.Trim(), "Pagado", "0");
 
                 limpiarCamposHist();
                 MessageBox.Show("Constancia antigua registrada correctamente en registros_sigep.csv.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -3397,40 +3243,11 @@ namespace SIGEP_App
                 string n1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom1.Text), @"\s+", " ");
                 string a1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape1.Text), @"\s+", " ");
 
-                string d2 = "---";
-                string n2 = "---";
-                string a2 = "---";
+                string d2 = (sac == "Matrimonio") ? (conDni ? txt_dni2.Text.Trim() : "SIN DNI") : "---";
+                string n2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom2.Text), @"\s+", " ") : "---";
+                string a2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape2.Text), @"\s+", " ") : "---";
 
-                if (sac == "Matrimonio")
-                {
-                    d2 = conDni ? txt_dni2.Text.Trim() : "SIN DNI";
-                    n2 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom2.Text), @"\s+", " ");
-                    a2 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape2.Text), @"\s+", " ");
-                }
-
-                this.db.actualizar_completo(
-                    idx_hist_seleccionado,
-                    d1,
-                    n1,
-                    a1,
-                    d2,
-                    n2,
-                    a2,
-                    "N/A",
-                    sac,
-                    "Finalizado",
-                    "NO",
-                    "---",
-                    "1-1-1",
-                    "Constancia histórica registrada.",
-                    "",
-                    txt_fec.Text.Trim(),
-                    txt_lib.Text.Trim(),
-                    txt_fol.Text.Trim(),
-                    txt_asi.Text.Trim(),
-                    "Pagado",
-                    "0"
-                );
+                this.db.actualizar_completo(idx_hist_seleccionado, d1, n1, a1, d2, n2, a2, "N/A", sac, "Finalizado", "NO", "---", "1-1-1", "Constancia histórica registrada.", "", txt_fec.Text.Trim(), txt_lib.Text.Trim(), txt_fol.Text.Trim(), txt_asi.Text.Trim(), "Pagado", "0");
 
                 limpiarCamposHist();
                 MessageBox.Show("Constancia antigua actualizada correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
