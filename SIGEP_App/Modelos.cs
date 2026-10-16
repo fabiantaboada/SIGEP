@@ -55,7 +55,6 @@ namespace SIGEP_App
         public string archivo;
         private static readonly CultureInfo CulturaEs = new CultureInfo("es-PE");
 
-        // Capacidad inicial pequeña que crece automáticamente de forma ilimitada
         private int capacidad = 10;
         public int total_registros = 0;
 
@@ -621,14 +620,22 @@ namespace SIGEP_App
             return s;
         }
 
-        // Búsqueda directa por DNI en todos los registros
         public int[] buscar_indices_por_dni(string dni)
+        {
+            return this.buscar_indices_por_dni(dni, false);
+        }
+
+        public int[] buscar_indices_por_dni(string dni, bool soloTramites)
         {
             int[] temp = new int[this.total_registros];
             int contador = 0;
 
             for (int i = 0; i < this.total_registros; i++)
             {
+                if (soloTramites && this.origenes[i] == "ANTIGUO")
+                {
+                    continue;
+                }
                 if (this.dnis_prin[i] == dni && dni != "SIN DNI" && dni != "---")
                 {
                     temp[contador] = i;
@@ -649,8 +656,12 @@ namespace SIGEP_App
             return resultados;
         }
 
-        // Búsqueda directa por Apellidos en todos los registros
         public int[] buscar_indices_por_apellidos(string apellidoBuscado)
+        {
+            return this.buscar_indices_por_apellidos(apellidoBuscado, false);
+        }
+
+        public int[] buscar_indices_por_apellidos(string apellidoBuscado, bool soloTramites)
         {
             string busqNorm = NormalizarSinTildes(apellidoBuscado.Trim());
             if (busqNorm == "")
@@ -663,6 +674,10 @@ namespace SIGEP_App
 
             for (int i = 0; i < this.total_registros; i++)
             {
+                if (soloTramites && this.origenes[i] == "ANTIGUO")
+                {
+                    continue;
+                }
                 string ape1Norm = NormalizarSinTildes(this.apellidos[i]);
                 string ape2Norm = NormalizarSinTildes(this.apellidos_sec[i]);
 
@@ -820,11 +835,13 @@ namespace SIGEP_App
             }
             try
             {
-                return BaseDatos.A_MayusculasConTildes(Regex.Unescape(raw));
+                string limpio = BaseDatos.A_MayusculasConTildes(Regex.Unescape(raw));
+                return Regex.Replace(limpio, @"[^A-ZÁÉÍÓÚÑÜ ]", "");
             }
             catch
             {
-                return BaseDatos.A_MayusculasConTildes(raw);
+                string limpio = BaseDatos.A_MayusculasConTildes(raw);
+                return Regex.Replace(limpio, @"[^A-ZÁÉÍÓÚÑÜ ]", "");
             }
         }
 

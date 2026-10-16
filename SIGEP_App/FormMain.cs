@@ -489,6 +489,14 @@ namespace SIGEP_App
 
         private bool ignorarEvento = false;
 
+        private bool EsCaracterLetraEspanol(char c)
+        {
+            char mayus = char.ToUpper(c, new CultureInfo("es-PE"));
+            return (mayus >= 'A' && mayus <= 'Z') ||
+                   mayus == 'Á' || mayus == 'É' || mayus == 'Í' ||
+                   mayus == 'Ó' || mayus == 'Ú' || mayus == 'Ñ' || mayus == 'Ü';
+        }
+
         private void adjuntar_validacion(TextBox entry_widget, string tipo)
         {
             entry_widget.BorderStyle = BorderStyle.FixedSingle;
@@ -539,11 +547,21 @@ namespace SIGEP_App
             }
             else if (tipo == "texto")
             {
+                // Solo permite letras del alfabeto español y espacio simple (bloquea '.', '-', números y símbolos)
                 entry_widget.MaxLength = 70;
                 entry_widget.CharacterCasing = CharacterCasing.Upper;
                 entry_widget.KeyPress += (s, e) =>
                 {
-                    if (!char.IsControl(e.KeyChar) && !char.IsLetter(e.KeyChar) && e.KeyChar != ' ' && e.KeyChar != '.' && e.KeyChar != '-')
+                    if (char.IsControl(e.KeyChar))
+                    {
+                        return;
+                    }
+                    if (!this.EsCaracterLetraEspanol(e.KeyChar) && e.KeyChar != ' ')
+                    {
+                        e.Handled = true;
+                        return;
+                    }
+                    if (e.KeyChar == ' ' && (entry_widget.SelectionStart == 0 || (entry_widget.Text.Length > 0 && entry_widget.SelectionStart > 0 && entry_widget.Text[entry_widget.SelectionStart - 1] == ' ')))
                     {
                         e.Handled = true;
                     }
@@ -630,7 +648,8 @@ namespace SIGEP_App
                 else if (tipo == "texto")
                 {
                     string mayusConTildes = val.ToUpper(new CultureInfo("es-PE"));
-                    string clean_val = Regex.Replace(mayusConTildes, @"[^A-ZÁÉÍÓÚÑÜ\s\.\-]", "");
+                    string clean_val = Regex.Replace(mayusConTildes, @"[^A-ZÁÉÍÓÚÑÜ ]", "");
+                    clean_val = Regex.Replace(clean_val, @"\s{2,}", " ").TrimStart();
                     if (clean_val != val)
                     {
                         int pos = entry_widget.SelectionStart;
@@ -865,7 +884,12 @@ namespace SIGEP_App
             {
                 return false;
             }
-            string soloLetras = Regex.Replace(BaseDatos.A_MayusculasConTildes(nombre), @"[^A-ZÁÉÍÓÚÑÜ]", "");
+            string mayus = BaseDatos.A_MayusculasConTildes(nombre);
+            if (!Regex.IsMatch(mayus, @"^[A-ZÁÉÍÓÚÑÜ ]+$"))
+            {
+                return false;
+            }
+            string soloLetras = Regex.Replace(mayus, @"[^A-ZÁÉÍÓÚÑÜ]", "");
             return soloLetras.Length >= 2;
         }
 
@@ -1386,12 +1410,12 @@ namespace SIGEP_App
 
             Label lbl_nom1 = new Label() { Text = "Nombres:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
             TextBox txt_nom1 = new TextBox();
-            AsignarPlaceholder(txt_nom1, "NOMBRES");
+            AsignarPlaceholder(txt_nom1, "SOLO LETRAS");
             this.adjuntar_validacion(txt_nom1, "texto");
 
             Label lbl_ape1 = new Label() { Text = "Apellidos:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
             TextBox txt_ape1 = new TextBox();
-            AsignarPlaceholder(txt_ape1, "APELLIDOS");
+            AsignarPlaceholder(txt_ape1, "SOLO LETRAS");
             this.adjuntar_validacion(txt_ape1, "texto");
 
             Label lbl_d2 = new Label() { Text = "DNI Novia:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
@@ -1400,12 +1424,12 @@ namespace SIGEP_App
 
             Label lbl_nom2 = new Label() { Text = "Nombres:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
             TextBox txt_nom2 = new TextBox() { Visible = false };
-            AsignarPlaceholder(txt_nom2, "NOMBRES NOVIA");
+            AsignarPlaceholder(txt_nom2, "SOLO LETRAS");
             this.adjuntar_validacion(txt_nom2, "texto");
 
             Label lbl_ape2 = new Label() { Text = "Apellidos:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
             TextBox txt_ape2 = new TextBox() { Visible = false };
-            AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
+            AsignarPlaceholder(txt_ape2, "SOLO LETRAS");
             this.adjuntar_validacion(txt_ape2, "texto");
 
             this.VincularAutocompletadoReniecSeparado(txt_d1, txt_nom1, txt_ape1, txt_d2, null);
@@ -1649,11 +1673,11 @@ namespace SIGEP_App
                 }
                 if (!this.EsNombreValido(nom1_val))
                 {
-                    errores[cantErrores++] = "- Los Nombres del titular deben contener al menos 2 letras válidas.";
+                    errores[cantErrores++] = "- Los Nombres del titular deben contener únicamente letras (mínimo 2 letras).";
                 }
                 if (!this.EsNombreValido(ape1_val))
                 {
-                    errores[cantErrores++] = "- Los Apellidos del titular deben contener al menos 2 letras válidas.";
+                    errores[cantErrores++] = "- Los Apellidos del titular deben contener únicamente letras (mínimo 2 letras).";
                 }
 
                 if (tipo_sel == "Matrimonio")
@@ -1668,11 +1692,11 @@ namespace SIGEP_App
                     }
                     if (!this.EsNombreValido(nom2_val))
                     {
-                        errores[cantErrores++] = "- Los Nombres de la Novia deben contener al menos 2 letras válidas.";
+                        errores[cantErrores++] = "- Los Nombres de la Novia deben contener únicamente letras (mínimo 2 letras).";
                     }
                     if (!this.EsNombreValido(ape2_val))
                     {
-                        errores[cantErrores++] = "- Los Apellidos de la Novia deben contener al menos 2 letras válidas.";
+                        errores[cantErrores++] = "- Los Apellidos de la Novia deben contener únicamente letras (mínimo 2 letras).";
                     }
                     if (dni1_val != "" && dni1_val == dni2_val)
                     {
@@ -1813,7 +1837,7 @@ namespace SIGEP_App
             this.adjuntar_validacion(txt_bus_dni, "dni");
 
             TextBox txt_bus_ape = new TextBox() { Width = 250, Visible = false };
-            AsignarPlaceholder(txt_bus_ape, "INGRESE APELLIDOS A BUSCAR");
+            AsignarPlaceholder(txt_bus_ape, "SOLO LETRAS");
             this.adjuntar_validacion(txt_bus_ape, "texto");
 
             Button btnConsultar = CrearBotonAccion("Consultar", ColorTranslator.FromHtml("#10b981"), new Point(520, 12), new Size(140, 35));
@@ -2340,7 +2364,7 @@ namespace SIGEP_App
                     }
                     if (!this.EsNombreValido(ape_val))
                     {
-                        MessageBox.Show("Ingrese al menos 2 letras válidas para buscar por apellidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Ingrese únicamente letras (al menos 2 letras) para buscar por apellidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                     int[] res = this.db.buscar_indices_por_apellidos(ape_val);
@@ -2385,7 +2409,7 @@ namespace SIGEP_App
 
                 if (!this.EsNombreValido(nom1_val) || !this.EsNombreValido(ape1_val))
                 {
-                    MessageBox.Show("Los Nombres y Apellidos del titular deben contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Los Nombres y Apellidos del titular deben contener únicamente letras (mínimo 2 letras).", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -2407,7 +2431,7 @@ namespace SIGEP_App
 
                     if (!this.EsNombreValido(nom2_val) || !this.EsNombreValido(ape2_val))
                     {
-                        MessageBox.Show("Los Nombres y Apellidos de la Novia son obligatorios.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Los Nombres y Apellidos de la Novia deben contener únicamente letras (mínimo 2 letras).", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                     if (dni1_val != "SIN DNI" && dni1_val == dni2_val)
@@ -2856,12 +2880,12 @@ namespace SIGEP_App
 
             Label lblNom1 = new Label() { Text = "Nombre:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
             TextBox txt_nom1 = new TextBox();
-            AsignarPlaceholder(txt_nom1, "NOMBRES");
+            AsignarPlaceholder(txt_nom1, "SOLO LETRAS");
             this.adjuntar_validacion(txt_nom1, "texto");
 
             Label lblApe1 = new Label() { Text = "Apellido:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
             TextBox txt_ape1 = new TextBox();
-            AsignarPlaceholder(txt_ape1, "APELLIDOS");
+            AsignarPlaceholder(txt_ape1, "SOLO LETRAS");
             this.adjuntar_validacion(txt_ape1, "texto");
 
             Label lblDni2 = new Label() { Text = "DNI Novia:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
@@ -2870,12 +2894,12 @@ namespace SIGEP_App
 
             Label lblNom2 = new Label() { Text = "Nombre:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
             TextBox txt_nom2 = new TextBox() { Visible = false };
-            AsignarPlaceholder(txt_nom2, "NOMBRES NOVIA");
+            AsignarPlaceholder(txt_nom2, "SOLO LETRAS");
             this.adjuntar_validacion(txt_nom2, "texto");
 
             Label lblApe2 = new Label() { Text = "Apellido:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true, Visible = false };
             TextBox txt_ape2 = new TextBox() { Visible = false };
-            AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
+            AsignarPlaceholder(txt_ape2, "SOLO LETRAS");
             this.adjuntar_validacion(txt_ape2, "texto");
 
             this.VincularAutocompletadoReniecSeparado(txt_dni1, txt_nom1, txt_ape1, txt_dni2, null);
@@ -3033,11 +3057,11 @@ namespace SIGEP_App
                 }
                 if (!this.EsNombreValido(n1))
                 {
-                    errores[cantErrores++] = "- El Nombre es obligatorio (mínimo 2 letras).";
+                    errores[cantErrores++] = "- El Nombre es obligatorio y solo admite letras (mínimo 2 letras).";
                 }
                 if (!this.EsNombreValido(a1))
                 {
-                    errores[cantErrores++] = "- El Apellido es obligatorio (mínimo 2 letras).";
+                    errores[cantErrores++] = "- El Apellido es obligatorio y solo admite letras (mínimo 2 letras).";
                 }
 
                 if (sac == "Matrimonio")
@@ -3055,7 +3079,7 @@ namespace SIGEP_App
                     }
                     if (!this.EsNombreValido(n2) || !this.EsNombreValido(a2))
                     {
-                        errores[cantErrores++] = "- El Nombre y Apellido de la Novia son obligatorios.";
+                        errores[cantErrores++] = "- El Nombre y Apellido de la Novia son obligatorios y solo admiten letras.";
                     }
                     if (n1 != "" && a1 != "" && (n1 + " " + a1) == (n2 + " " + a2))
                     {
