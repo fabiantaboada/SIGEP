@@ -117,7 +117,6 @@ namespace SIGEP_App
             this.deudas = new string[this.capacidad];
         }
 
-        // Copia un arreglo a uno nuevo de mayor capacidad usando algoritmia clásica
         private static string[] AmpliarArregloTexto(string[] original, int cantidadActual, int nuevaCapacidad)
         {
             string[] nuevo = new string[nuevaCapacidad];
@@ -128,7 +127,6 @@ namespace SIGEP_App
             return nuevo;
         }
 
-        // Duplica la capacidad de los 21 arreglos paralelos cuando se llenan (sin límite máximo)
         private void AsegurarCapacidad()
         {
             if (this.total_registros >= this.capacidad)
@@ -456,7 +454,7 @@ namespace SIGEP_App
                         this.estados[pos] = fila[7].Trim();
                         this.tiene_padrinos[pos] = "NO";
                         this.estado_padrinos[pos] = "---";
-                        this.checks_mem[pos] = esHist ? "1-1-1" : fila[10].Replace(",", "-");
+                        this.checks_mem[pos] = esHist ? "1-1-1-1-1-1-1-1-1" : fila[10].Replace(",", "-");
                         this.obs_auto[pos] = RestaurarSaltosLinea(fila[8]);
                         this.obs_adic[pos] = RestaurarSaltosLinea(fila[9]);
                         this.fechas_sac[pos] = fila[11].Trim();
@@ -513,7 +511,6 @@ namespace SIGEP_App
 
         public void registrar(string origen, string d1, string nom1, string ape1, string d2, string nom2, string ape2, string gen, string tipo, string est, string t_pad, string est_pad, string chks, string o_auto, string o_adic, string fec, string lib, string fol, string asi, string pag, string deu)
         {
-            // Si el arreglo se llenó, duplica su capacidad automáticamente antes de insertar
             this.AsegurarCapacidad();
 
             int pos = this.total_registros;
@@ -624,17 +621,14 @@ namespace SIGEP_App
             return s;
         }
 
-        public int[] buscar_indices_por_dni(string dni, bool soloTramites = true)
+        // Búsqueda directa por DNI en todos los registros
+        public int[] buscar_indices_por_dni(string dni)
         {
             int[] temp = new int[this.total_registros];
             int contador = 0;
 
             for (int i = 0; i < this.total_registros; i++)
             {
-                if (soloTramites && this.origenes[i] == "ANTIGUO")
-                {
-                    continue;
-                }
                 if (this.dnis_prin[i] == dni && dni != "SIN DNI" && dni != "---")
                 {
                     temp[contador] = i;
@@ -655,7 +649,8 @@ namespace SIGEP_App
             return resultados;
         }
 
-        public int[] buscar_indices_por_apellidos(string apellidoBuscado, bool soloTramites = true)
+        // Búsqueda directa por Apellidos en todos los registros
+        public int[] buscar_indices_por_apellidos(string apellidoBuscado)
         {
             string busqNorm = NormalizarSinTildes(apellidoBuscado.Trim());
             if (busqNorm == "")
@@ -668,10 +663,6 @@ namespace SIGEP_App
 
             for (int i = 0; i < this.total_registros; i++)
             {
-                if (soloTramites && this.origenes[i] == "ANTIGUO")
-                {
-                    continue;
-                }
                 string ape1Norm = NormalizarSinTildes(this.apellidos[i]);
                 string ape2Norm = NormalizarSinTildes(this.apellidos_sec[i]);
 
@@ -771,7 +762,6 @@ namespace SIGEP_App
 
     public static class ApiReniec
     {
-        // Caché temporal con arreglos paralelos dinámicos (se vacía al guardar el expediente)
         private static int capCache = 10;
         private static string[] cacheDnis = new string[10];
         private static string[] cacheNombres = new string[10];

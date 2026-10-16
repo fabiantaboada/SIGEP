@@ -1237,7 +1237,12 @@ namespace SIGEP_App
             this.content_frame.Controls.Add(lblTit);
 
             Panel f_conf = new Panel() { Size = new Size(680, 250), Location = new Point(30, lblTit.Bottom + 20), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-            Label lblSub = new Label() { Text = "Selecciona la fecha de inicio (Día / Mes)", Font = FuentePx(15f, FontStyle.Bold), Location = new Point(25, 22), AutoSize = true };
+
+            Label lblSub = new Label();
+            lblSub.Text = "Selecciona la fecha de inicio (Día / Mes)";
+            lblSub.Font = FuentePx(15f, FontStyle.Bold);
+            lblSub.Location = new Point(25, 22);
+            lblSub.AutoSize = true;
             f_conf.Controls.Add(lblSub);
 
             string[] lista_dias = new string[32];
@@ -1788,7 +1793,7 @@ namespace SIGEP_App
             };
         }
 
-        // ================= 6. BUSCAR Y EDITAR =================
+        // ================= 6. BUSCAR Y EDITAR (ADMITE TRÁMITES Y CONSTANCIAS ANTIGUAS) =================
         private void mostrar_buscar()
         {
             this.limpiar_contenido();
@@ -2143,6 +2148,7 @@ namespace SIGEP_App
 
                 string tipo = this.db.tipos[idx];
                 bool esMatrimonio = (tipo == "Matrimonio");
+                bool esAntiguo = (this.db.origenes[idx] == "ANTIGUO");
 
                 lbl_e_dni1.Text = this.ObtenerEtiquetaDniPorSacramento(tipo);
 
@@ -2153,13 +2159,30 @@ namespace SIGEP_App
                 lbl_e_ape2.Visible = esMatrimonio;
                 t_ape2.Visible = esMatrimonio;
 
-                t_dni1.Text = this.db.dnis_prin[idx];
+                if (this.db.dnis_prin[idx] == "SIN DNI" || this.db.dnis_prin[idx] == "---")
+                {
+                    t_dni1.Text = "";
+                    this.ActualizarBorde(t_dni1, ColorTranslator.FromHtml("#cbd5e1"));
+                }
+                else
+                {
+                    t_dni1.Text = this.db.dnis_prin[idx];
+                }
+
                 t_nom1.Text = BaseDatos.A_MayusculasConTildes(this.db.nombres[idx]);
                 t_ape1.Text = BaseDatos.A_MayusculasConTildes(this.db.apellidos[idx]);
 
                 if (esMatrimonio)
                 {
-                    t_dni2.Text = (this.db.dnis_sec[idx] != "---") ? this.db.dnis_sec[idx] : "";
+                    if (this.db.dnis_sec[idx] == "SIN DNI" || this.db.dnis_sec[idx] == "---")
+                    {
+                        t_dni2.Text = "";
+                        this.ActualizarBorde(t_dni2, ColorTranslator.FromHtml("#cbd5e1"));
+                    }
+                    else
+                    {
+                        t_dni2.Text = this.db.dnis_sec[idx];
+                    }
                     t_nom2.Text = (this.db.nombres_sec[idx] != "---") ? BaseDatos.A_MayusculasConTildes(this.db.nombres_sec[idx]) : "";
                     t_ape2.Text = (this.db.apellidos_sec[idx] != "---") ? BaseDatos.A_MayusculasConTildes(this.db.apellidos_sec[idx]) : "";
                 }
@@ -2178,7 +2201,14 @@ namespace SIGEP_App
                 string[] memoria = this.db.checks_mem[idx].Split(new char[] { '-', ',' }, StringSplitOptions.RemoveEmptyEntries);
                 for (int k = 0; k < this.reqs_activos_edit; k++)
                 {
-                    this.chks_edit[k].Checked = (k < memoria.Length && memoria[k] == "1");
+                    if (esAntiguo && this.db.checks_mem[idx].StartsWith("1-1-1"))
+                    {
+                        this.chks_edit[k].Checked = true;
+                    }
+                    else
+                    {
+                        this.chks_edit[k].Checked = (k < memoria.Length && memoria[k] == "1");
+                    }
                 }
 
                 c_est.SelectedItem = c_est.Items.Contains(this.db.estados[idx]) ? this.db.estados[idx] : c_est.Items[0];
@@ -2229,7 +2259,7 @@ namespace SIGEP_App
                     string nomMostrar = this.db.nombres[idx];
                     string apeMostrar = this.db.apellidos[idx];
 
-                    if (this.db.tipos[idx] == "Matrimonio" && this.db.dnis_sec[idx] != "---")
+                    if (this.db.tipos[idx] == "Matrimonio" && this.db.nombres_sec[idx] != "---")
                     {
                         dniMostrar = this.db.dnis_prin[idx] + " / " + this.db.dnis_sec[idx];
                         nomMostrar = this.db.nombres[idx] + " / " + this.db.nombres_sec[idx];
@@ -2255,7 +2285,7 @@ namespace SIGEP_App
                     f_edit.Visible = false;
                     if (mostrarMensaje)
                     {
-                        MessageBox.Show("No se encontraron expedientes en trámite con ese criterio.", "Sin Resultados", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("No se encontraron expedientes registrados con ese criterio.", "Sin Resultados", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
             };
@@ -2296,16 +2326,7 @@ namespace SIGEP_App
                         MessageBox.Show("El DNI ingresado es incorrecto. Debe contener exactamente 8 dígitos numéricos válidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
-                    int[] res = this.db.buscar_indices_por_dni(dni_val, true);
-                    if (res.Length == 0)
-                    {
-                        int[] resAntiguo = this.db.buscar_indices_por_dni(dni_val, false);
-                        if (resAntiguo.Length > 0)
-                        {
-                            MessageBox.Show("El DNI " + dni_val + " pertenece a una Constancia Antigua registrada en 'Opciones Avanzadas'. Diríjase a esa pestaña para editarlo.", "Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            return;
-                        }
-                    }
+                    int[] res = this.db.buscar_indices_por_dni(dni_val);
                     poblarTablaResultados(res, conAlerta);
                 }
                 else
@@ -2322,16 +2343,7 @@ namespace SIGEP_App
                         MessageBox.Show("Ingrese al menos 2 letras válidas para buscar por apellidos.", "Error de Búsqueda", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
-                    int[] res = this.db.buscar_indices_por_apellidos(ape_val, true);
-                    if (res.Length == 0)
-                    {
-                        int[] resAntiguo = this.db.buscar_indices_por_apellidos(ape_val, false);
-                        if (resAntiguo.Length > 0)
-                        {
-                            MessageBox.Show("El apellido '" + ape_val + "' corresponde a una Constancia Antigua registrada en 'Opciones Avanzadas'.", "Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            return;
-                        }
-                    }
+                    int[] res = this.db.buscar_indices_por_apellidos(ape_val);
                     poblarTablaResultados(res, conAlerta);
                 }
             };
@@ -2351,6 +2363,8 @@ namespace SIGEP_App
 
                 int i = idx_actual;
                 string tipo_actual = this.db.tipos[i];
+                bool esAntiguo = (this.db.origenes[i] == "ANTIGUO");
+
                 string dni1_val = t_dni1.Text.Trim();
                 string nom1_val = Regex.Replace(BaseDatos.A_MayusculasConTildes(t_nom1.Text), @"\s+", " ");
                 string ape1_val = Regex.Replace(BaseDatos.A_MayusculasConTildes(t_ape1.Text), @"\s+", " ");
@@ -2359,11 +2373,16 @@ namespace SIGEP_App
                 string nom2_val = "---";
                 string ape2_val = "---";
 
-                if (dni1_val.Length != 8 || dni1_val == "00000000")
+                if (esAntiguo && dni1_val == "" && this.db.dnis_prin[i] == "SIN DNI")
+                {
+                    dni1_val = "SIN DNI";
+                }
+                else if (dni1_val.Length != 8 || dni1_val == "00000000")
                 {
                     MessageBox.Show("El " + this.ObtenerEtiquetaDniPorSacramento(tipo_actual).Replace(":", "") + " debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
+
                 if (!this.EsNombreValido(nom1_val) || !this.EsNombreValido(ape1_val))
                 {
                     MessageBox.Show("Los Nombres y Apellidos del titular deben contener al menos 2 letras válidas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -2376,17 +2395,22 @@ namespace SIGEP_App
                     nom2_val = Regex.Replace(BaseDatos.A_MayusculasConTildes(t_nom2.Text), @"\s+", " ");
                     ape2_val = Regex.Replace(BaseDatos.A_MayusculasConTildes(t_ape2.Text), @"\s+", " ");
 
-                    if (dni2_val.Length != 8 || dni2_val == "00000000")
+                    if (esAntiguo && dni2_val == "" && this.db.dnis_sec[i] == "SIN DNI")
+                    {
+                        dni2_val = "SIN DNI";
+                    }
+                    else if (dni2_val.Length != 8 || dni2_val == "00000000")
                     {
                         MessageBox.Show("El DNI Novia debe tener 8 dígitos numéricos válidos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
+
                     if (!this.EsNombreValido(nom2_val) || !this.EsNombreValido(ape2_val))
                     {
                         MessageBox.Show("Los Nombres y Apellidos de la Novia son obligatorios.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                    if (dni1_val == dni2_val)
+                    if (dni1_val != "SIN DNI" && dni1_val == dni2_val)
                     {
                         MessageBox.Show("No se pueden colocar 2 DNIs iguales. Los DNIs de los novios deben ser diferentes.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
@@ -2398,27 +2422,33 @@ namespace SIGEP_App
                     }
                 }
 
-                for (int idxExist = 0; idxExist < this.db.total_registros; idxExist++)
+                if (dni1_val != "SIN DNI")
                 {
-                    if (idxExist != i && this.db.tipos[idxExist] == tipo_actual)
+                    for (int idxExist = 0; idxExist < this.db.total_registros; idxExist++)
                     {
-                        if (this.db.dnis_prin[idxExist] == dni1_val || (tipo_actual == "Matrimonio" && this.db.dnis_sec[idxExist] == dni1_val))
+                        if (idxExist != i && this.db.tipos[idxExist] == tipo_actual)
                         {
-                            MessageBox.Show("Ya existe otro expediente de " + tipo_actual + " con el DNI " + dni1_val + ".", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
+                            if (this.db.dnis_prin[idxExist] == dni1_val || (tipo_actual == "Matrimonio" && this.db.dnis_sec[idxExist] == dni1_val))
+                            {
+                                MessageBox.Show("Ya existe otro expediente de " + tipo_actual + " con el DNI " + dni1_val + ".", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
                         }
                     }
                 }
 
-                if (tipo_actual == "Primera Comunión" && this.config.fecha_comunion == "--/--")
+                if (!esAntiguo)
                 {
-                    MessageBox.Show("Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                if (tipo_actual == "Confirmación" && this.config.fecha_confirmacion == "--/--")
-                {
-                    MessageBox.Show("Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
+                    if (tipo_actual == "Primera Comunión" && this.config.fecha_comunion == "--/--")
+                    {
+                        MessageBox.Show("Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    if (tipo_actual == "Confirmación" && this.config.fecha_confirmacion == "--/--")
+                    {
+                        MessageBox.Show("Debe configurar la fecha de inicio de Catequesis en 'Configuración de Fechas' antes de actualizar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
                 }
 
                 string f_v = t_fec.Text.Trim();
@@ -2799,7 +2829,7 @@ namespace SIGEP_App
             };
         }
 
-        // ================= 8. OPCIONES AVANZADAS: CONSTANCIAS ANTIGUAS =================
+        // ================= 8. OPCIONES AVANZADAS: REGISTRO DE CONSTANCIAS ANTIGUAS =================
         private void mostrar_opciones_avanzadas()
         {
             this.limpiar_contenido();
@@ -2807,13 +2837,10 @@ namespace SIGEP_App
             Label lblTit = new Label() { Text = "Opciones Avanzadas - Constancias Antiguas", Font = FuentePx(24f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#2563eb"), Location = new Point(25, 15), AutoSize = true };
             this.content_frame.Controls.Add(lblTit);
 
-            Label lblSub = new Label() { Text = "Registro, edición y eliminación de constancias inscritas anteriormente (Con DNI o Sin DNI)", Font = FuentePx(14f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), Location = new Point(25, lblTit.Bottom + 6), AutoSize = true };
+            Label lblSub = new Label() { Text = "Registro de constancias inscritas anteriormente (Para editarlas o actualizarlas utilice 'Buscar y Editar')", Font = FuentePx(14f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), Location = new Point(25, lblTit.Bottom + 6), AutoSize = true };
             this.content_frame.Controls.Add(lblSub);
 
             Panel f_form = new Panel() { Location = new Point(25, lblSub.Bottom + 15), Size = new Size(Math.Max(780, this.content_frame.ClientSize.Width - 55), 295), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-
-            int idx_hist_seleccionado = -1;
-            bool cargandoExistente = false;
 
             Label lblSac = new Label() { Text = "Sacramento:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(25, 22), AutoSize = true };
             ComboBox cb_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 190, Font = FuentePx(13.5f) };
@@ -2851,8 +2878,8 @@ namespace SIGEP_App
             AsignarPlaceholder(txt_ape2, "APELLIDOS NOVIA");
             this.adjuntar_validacion(txt_ape2, "texto");
 
-            this.VincularAutocompletadoReniecSeparado(txt_dni1, txt_nom1, txt_ape1, txt_dni2, () => cargandoExistente);
-            this.VincularAutocompletadoReniecSeparado(txt_dni2, txt_nom2, txt_ape2, txt_dni1, () => cargandoExistente);
+            this.VincularAutocompletadoReniecSeparado(txt_dni1, txt_nom1, txt_ape1, txt_dni2, null);
+            this.VincularAutocompletadoReniecSeparado(txt_dni2, txt_nom2, txt_ape2, txt_dni1, null);
 
             Label lblFec = new Label() { Text = "Fecha:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
             Label lblFecModH = new Label() { Text = "(DD/MM/AAAA)", Font = FuentePx(11.5f, FontStyle.Regular), ForeColor = ColorTranslator.FromHtml("#64748b"), AutoSize = true };
@@ -2871,17 +2898,15 @@ namespace SIGEP_App
             TextBox txt_asi = new TextBox() { Width = 85 };
             this.adjuntar_validacion(txt_asi, "registro_libro");
 
-            Button btnRegistrar = CrearBotonAccion("Registrar", ColorTranslator.FromHtml("#2563eb"), new Point(25, 222), new Size(185, 42), 14f);
-            Button btnEditar = CrearBotonAccion("Editar / Actualizar", ColorTranslator.FromHtml("#10b981"), new Point(230, 222), new Size(185, 42), 14f);
-            Button btnEliminar = CrearBotonAccion("Eliminar", ColorTranslator.FromHtml("#ef4444"), new Point(435, 222), new Size(185, 42), 14f);
-            Button btnLimpiar = CrearBotonAccion("Limpiar Campos", ColorTranslator.FromHtml("#64748b"), new Point(640, 222), new Size(185, 42), 14f);
+            Button btnRegistrar = CrearBotonAccion("Registrar Constancia", ColorTranslator.FromHtml("#2563eb"), new Point(25, 222), new Size(220, 44), 14.5f);
+            Button btnLimpiar = CrearBotonAccion("Limpiar Campos", ColorTranslator.FromHtml("#64748b"), new Point(270, 222), new Size(200, 44), 14.5f);
 
             f_form.Controls.AddRange(new Control[] {
                 lblSac, cb_sac, lblModoDni, cb_modo_dni,
                 lblDni1, txt_dni1, lblNom1, txt_nom1, lblApe1, txt_ape1,
                 lblDni2, txt_dni2, lblNom2, txt_nom2, lblApe2, txt_ape2,
                 lblFec, lblFecModH, txt_fec, lblLib, txt_lib, lblFol, txt_fol, lblAsi, txt_asi,
-                btnRegistrar, btnEditar, btnEliminar, btnLimpiar
+                btnRegistrar, btnLimpiar
             });
             this.content_frame.Controls.Add(f_form);
 
@@ -2912,86 +2937,14 @@ namespace SIGEP_App
                 lblAsi.Location = new Point(txt_fol.Right + 25, 158);
                 txt_asi.Location = new Point(lblAsi.Right + 8, 154);
 
-                int espacioBtns = Math.Max(15, (anchoDisp - 50 - (4 * 185)) / 3);
-                btnRegistrar.Location = new Point(25, 222);
-                btnEditar.Location = new Point(btnRegistrar.Right + espacioBtns, 222);
-                btnEliminar.Location = new Point(btnEditar.Right + espacioBtns, 222);
-                btnLimpiar.Location = new Point(btnEliminar.Right + espacioBtns, 222);
+                int xBotones = (anchoDisp - (btnRegistrar.Width + btnLimpiar.Width + 25)) / 2;
+                btnRegistrar.Location = new Point(xBotones, 222);
+                btnLimpiar.Location = new Point(btnRegistrar.Right + 25, 222);
 
                 f_form.Invalidate();
             };
 
             this.content_frame.Resize += (s, e) => ajustarDisenoAvanzadas();
-
-            Action buscarConstanciaExistente = () =>
-            {
-                if (cargandoExistente || cb_sac.SelectedItem == null || cb_modo_dni.SelectedItem == null)
-                {
-                    return;
-                }
-                string sacSel = cb_sac.SelectedItem.ToString();
-                bool conDni = (cb_modo_dni.SelectedItem.ToString() == "Con DNI");
-                int encontrado = -1;
-
-                if (conDni)
-                {
-                    string d1 = txt_dni1.Text.Trim();
-                    if (d1.Length == 8)
-                    {
-                        for (int i = 0; i < this.db.total_registros; i++)
-                        {
-                            if (this.db.origenes[i] == "ANTIGUO" && this.db.tipos[i] == sacSel && (this.db.dnis_prin[i] == d1 || this.db.dnis_sec[i] == d1))
-                            {
-                                encontrado = i;
-                                break;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    string n1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom1.Text), @"\s+", " ");
-                    string a1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape1.Text), @"\s+", " ");
-                    if (n1.Length >= 2 && a1.Length >= 2)
-                    {
-                        for (int i = 0; i < this.db.total_registros; i++)
-                        {
-                            if (this.db.origenes[i] == "ANTIGUO" && this.db.tipos[i] == sacSel && this.db.nombres[i] == n1 && this.db.apellidos[i] == a1)
-                            {
-                                encontrado = i;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (encontrado != -1)
-                {
-                    cargandoExistente = true;
-                    idx_hist_seleccionado = encontrado;
-                    txt_nom1.Text = BaseDatos.A_MayusculasConTildes(this.db.nombres[encontrado]);
-                    txt_ape1.Text = BaseDatos.A_MayusculasConTildes(this.db.apellidos[encontrado]);
-                    if (sacSel == "Matrimonio")
-                    {
-                        txt_dni2.Text = (this.db.dnis_sec[encontrado] != "---" && this.db.dnis_sec[encontrado] != "SIN DNI") ? this.db.dnis_sec[encontrado] : "";
-                        txt_nom2.Text = (this.db.nombres_sec[encontrado] != "---") ? BaseDatos.A_MayusculasConTildes(this.db.nombres_sec[encontrado]) : "";
-                        txt_ape2.Text = (this.db.apellidos_sec[encontrado] != "---") ? BaseDatos.A_MayusculasConTildes(this.db.apellidos_sec[encontrado]) : "";
-                    }
-                    txt_fec.Text = this.db.fechas_sac[encontrado];
-                    txt_lib.Text = (this.db.libros[encontrado] != "---") ? this.db.libros[encontrado] : "";
-                    txt_fol.Text = (this.db.folios[encontrado] != "---") ? this.db.folios[encontrado] : "";
-                    txt_asi.Text = (this.db.asientos[encontrado] != "---") ? this.db.asientos[encontrado] : "";
-                    cargandoExistente = false;
-                }
-                else
-                {
-                    idx_hist_seleccionado = -1;
-                }
-            };
-
-            txt_dni1.TextChanged += (s, e) => buscarConstanciaExistente();
-            txt_nom1.TextChanged += (s, e) => buscarConstanciaExistente();
-            txt_ape1.TextChanged += (s, e) => buscarConstanciaExistente();
 
             Action actualizarVistaDniSac = () =>
             {
@@ -3025,7 +2978,6 @@ namespace SIGEP_App
                     txt_ape2.Text = "";
                 }
                 ajustarDisenoAvanzadas();
-                buscarConstanciaExistente();
             };
 
             cb_sac.SelectedIndexChanged += (s, e) => actualizarVistaDniSac();
@@ -3037,8 +2989,6 @@ namespace SIGEP_App
 
             Action limpiarCamposHist = () =>
             {
-                cargandoExistente = true;
-                idx_hist_seleccionado = -1;
                 cb_sac.SelectedItem = "Bautizo";
                 cb_modo_dni.SelectedItem = "Con DNI";
                 txt_dni1.Text = "";
@@ -3051,13 +3001,12 @@ namespace SIGEP_App
                 txt_lib.Text = "";
                 txt_fol.Text = "";
                 txt_asi.Text = "";
-                cargandoExistente = false;
                 actualizarVistaDniSac();
             };
 
             btnLimpiar.Click += (s, e) => limpiarCamposHist();
 
-            Func<int, bool> validarFormularioHistorico = (idxIgnorar) =>
+            btnRegistrar.Click += (s, e) =>
             {
                 string sac = cb_sac.SelectedItem.ToString();
                 bool conDni = (cb_modo_dni.SelectedItem.ToString() == "Con DNI");
@@ -3067,8 +3016,8 @@ namespace SIGEP_App
                 string a1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape1.Text), @"\s+", " ");
 
                 string d2 = (sac == "Matrimonio") ? (conDni ? txt_dni2.Text.Trim() : "SIN DNI") : "---";
-                string n2 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom2.Text), @"\s+", " ");
-                string a2 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape2.Text), @"\s+", " ");
+                string n2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom2.Text), @"\s+", " ") : "---";
+                string a2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape2.Text), @"\s+", " ") : "---";
 
                 string fec = txt_fec.Text.Trim();
                 string lib = txt_lib.Text.Trim();
@@ -3146,10 +3095,6 @@ namespace SIGEP_App
 
                 for (int i = 0; i < this.db.total_registros; i++)
                 {
-                    if (i == idxIgnorar)
-                    {
-                        continue;
-                    }
                     if (this.db.tipos[i] == sac)
                     {
                         if (conDni)
@@ -3179,15 +3124,6 @@ namespace SIGEP_App
                 if (cantErrores > 0)
                 {
                     MessageBox.Show("Por favor corrija los siguientes errores:\n\n" + this.UnirArregloConSeparador(errores, cantErrores, "\n"), "Validación de Constancia Antigua", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
-                }
-                return true;
-            };
-
-            btnRegistrar.Click += (s, e) =>
-            {
-                if (!validarFormularioHistorico(-1))
-                {
                     return;
                 }
 
@@ -3197,80 +3133,32 @@ namespace SIGEP_App
                     return;
                 }
 
-                string sac = cb_sac.SelectedItem.ToString();
-                bool conDni = (cb_modo_dni.SelectedItem.ToString() == "Con DNI");
-
-                string d1 = conDni ? txt_dni1.Text.Trim() : "SIN DNI";
-                string n1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom1.Text), @"\s+", " ");
-                string a1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape1.Text), @"\s+", " ");
-
-                string d2 = (sac == "Matrimonio") ? (conDni ? txt_dni2.Text.Trim() : "SIN DNI") : "---";
-                string n2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom2.Text), @"\s+", " ") : "---";
-                string a2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape2.Text), @"\s+", " ") : "---";
-
-                this.db.registrar("ANTIGUO", d1, n1, a1, d2, n2, a2, "N/A", sac, "Finalizado", "NO", "---", "1-1-1", "Constancia histórica registrada.", "", txt_fec.Text.Trim(), txt_lib.Text.Trim(), txt_fol.Text.Trim(), txt_asi.Text.Trim(), "Pagado", "0");
-
-                limpiarCamposHist();
-                MessageBox.Show("Constancia antigua registrada correctamente en registros_sigep.csv.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            };
-
-            btnEditar.Click += (s, e) =>
-            {
-                if (idx_hist_seleccionado == -1)
-                {
-                    buscarConstanciaExistente();
-                }
-                if (idx_hist_seleccionado == -1)
-                {
-                    MessageBox.Show("Ingrese el DNI (o el Nombre y Apellido en modo Sin DNI) de una constancia antigua ya registrada para poder editarla.", "Registro No Encontrado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                if (!validarFormularioHistorico(idx_hist_seleccionado))
-                {
-                    return;
-                }
-
-                DialogResult r = MessageBox.Show("¿Está seguro de guardar los cambios en esta constancia antigua?", "Confirmar Edición", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (r != DialogResult.Yes)
-                {
-                    return;
-                }
-
-                string sac = cb_sac.SelectedItem.ToString();
-                bool conDni = (cb_modo_dni.SelectedItem.ToString() == "Con DNI");
-
-                string d1 = conDni ? txt_dni1.Text.Trim() : "SIN DNI";
-                string n1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom1.Text), @"\s+", " ");
-                string a1 = Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape1.Text), @"\s+", " ");
-
-                string d2 = (sac == "Matrimonio") ? (conDni ? txt_dni2.Text.Trim() : "SIN DNI") : "---";
-                string n2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_nom2.Text), @"\s+", " ") : "---";
-                string a2 = (sac == "Matrimonio") ? Regex.Replace(BaseDatos.A_MayusculasConTildes(txt_ape2.Text), @"\s+", " ") : "---";
-
-                this.db.actualizar_completo(idx_hist_seleccionado, d1, n1, a1, d2, n2, a2, "N/A", sac, "Finalizado", "NO", "---", "1-1-1", "Constancia histórica registrada.", "", txt_fec.Text.Trim(), txt_lib.Text.Trim(), txt_fol.Text.Trim(), txt_asi.Text.Trim(), "Pagado", "0");
+                this.db.registrar(
+                    "ANTIGUO",
+                    d1,
+                    n1,
+                    a1,
+                    d2,
+                    n2,
+                    a2,
+                    "N/A",
+                    sac,
+                    "Finalizado",
+                    "NO",
+                    "---",
+                    "1-1-1-1-1-1-1-1-1",
+                    "Constancia histórica registrada.",
+                    "",
+                    fec,
+                    lib,
+                    fol,
+                    asi,
+                    "Pagado",
+                    "0"
+                );
 
                 limpiarCamposHist();
-                MessageBox.Show("Constancia antigua actualizada correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            };
-
-            btnEliminar.Click += (s, e) =>
-            {
-                if (idx_hist_seleccionado == -1)
-                {
-                    buscarConstanciaExistente();
-                }
-                if (idx_hist_seleccionado == -1)
-                {
-                    MessageBox.Show("Ingrese el DNI (o el Nombre y Apellido en modo Sin DNI) de una constancia antigua ya registrada para poder eliminarla.", "Registro No Encontrado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                DialogResult r = MessageBox.Show("¿Está seguro de eliminar permanentemente esta constancia antigua?", "Confirmar Eliminación", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                if (r == DialogResult.Yes)
-                {
-                    this.db.eliminar(idx_hist_seleccionado);
-                    limpiarCamposHist();
-                    MessageBox.Show("Constancia antigua eliminada correctamente.", "Eliminado", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                MessageBox.Show("Constancia antigua registrada correctamente. Puede consultarla o editarla desde 'Buscar y Editar'.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
         }
     }
