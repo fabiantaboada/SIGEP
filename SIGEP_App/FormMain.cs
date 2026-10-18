@@ -3098,10 +3098,6 @@ namespace SIGEP_App
                     {
                         errores[cantErrores++] = "- Al ser una Constancia Antigua, la fecha en que recibió el sacramento no puede ser futura.";
                     }
-                    if (fechaObj.Year < 1900)
-                    {
-                        errores[cantErrores++] = "- El año de la fecha debe ser válido (mayor o igual a 1900).";
-                    }
                 }
 
                 if (!this.EsNumeroPositivoValido(lib))
