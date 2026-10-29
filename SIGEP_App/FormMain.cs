@@ -547,7 +547,6 @@ namespace SIGEP_App
             }
             else if (tipo == "texto")
             {
-                // Solo permite letras del alfabeto español y espacio simple (bloquea '.', '-', números y símbolos)
                 entry_widget.MaxLength = 70;
                 entry_widget.CharacterCasing = CharacterCasing.Upper;
                 entry_widget.KeyPress += (s, e) =>
@@ -603,6 +602,23 @@ namespace SIGEP_App
                         e.Handled = true;
                         return;
                     }
+                    if (e.KeyChar == '0' && entry_widget.Text.Length == 0)
+                    {
+                        e.Handled = true;
+                    }
+                };
+            }
+            else if (tipo == "anio")
+            {
+                entry_widget.MaxLength = 4;
+                entry_widget.KeyPress += (s, e) =>
+                {
+                    // No permite letras ni símbolos, solo números
+                    if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+                    {
+                        e.Handled = true;
+                    }
+                    // No permite que el primer dígito sea 0
                     if (e.KeyChar == '0' && entry_widget.Text.Length == 0)
                     {
                         e.Handled = true;
@@ -719,6 +735,32 @@ namespace SIGEP_App
                         this.ActualizarBorde(entry_widget, gris);
                     }
                     else if (int.TryParse(val, out numPositivo) && numPositivo > 0)
+                    {
+                        this.ActualizarBorde(entry_widget, verde);
+                    }
+                    else
+                    {
+                        this.ActualizarBorde(entry_widget, rojo);
+                    }
+                }
+                else if (tipo == "anio")
+                {
+                    string clean_val = Regex.Replace(val, @"[^0-9]", "");
+                    if (clean_val.Length > 0 && clean_val[0] == '0')
+                    {
+                        clean_val = clean_val.Substring(1);
+                    }
+                    if (clean_val != val)
+                    {
+                        entry_widget.Text = clean_val;
+                        entry_widget.SelectionStart = clean_val.Length;
+                        val = clean_val;
+                    }
+                    if (val == "")
+                    {
+                        this.ActualizarBorde(entry_widget, gris);
+                    }
+                    else if (val.Length == 4)
                     {
                         this.ActualizarBorde(entry_widget, verde);
                     }
@@ -2488,6 +2530,14 @@ namespace SIGEP_App
                         MessageBox.Show("El formato de la Fecha Oficial debe ser una fecha válida: DD/MM/AAAA.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
+
+                    // VALIDACIÓN: No permitir nuevas fechas anteriores a hoy en la actualización 
+                    string fecha_original = this.db.fechas_sac[i];
+                    if (f_v != fecha_original && fecha_obj.Date < DateTime.Now.Date)
+                    {
+                        MessageBox.Show("La nueva Fecha Oficial asignada no puede ser anterior al día de hoy.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
                 }
 
                 string estado_elegido = c_est.SelectedItem.ToString();
@@ -2651,28 +2701,47 @@ namespace SIGEP_App
             Label lblTit = new Label() { Text = "Reporte General de Expedientes", Font = FuentePx(24f, FontStyle.Bold), ForeColor = ColorTranslator.FromHtml("#2563eb"), Location = new Point(25, 15), AutoSize = true };
             this.content_frame.Controls.Add(lblTit);
 
-            Panel f_filtros = new Panel() { Location = new Point(25, lblTit.Bottom + 10), Size = new Size(Math.Max(780, this.content_frame.ClientSize.Width - 55), 66), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
+            Panel f_filtros = new Panel() { Location = new Point(25, lblTit.Bottom + 10), Size = new Size(Math.Max(780, this.content_frame.ClientSize.Width - 55), 100), BackColor = ColorTranslator.FromHtml("#f1f5f9"), BorderStyle = BorderStyle.FixedSingle };
 
-            Label lblSac = new Label() { Text = "Sacramento:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 22), AutoSize = true };
+            Label lblSac = new Label() { Text = "Sacramento:", Font = FuentePx(13.5f, FontStyle.Bold), Location = new Point(15, 18), AutoSize = true };
             ComboBox cb_filtro_sac = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145, Font = FuentePx(13.5f) };
             cb_filtro_sac.Items.AddRange(new string[] { "Todos", "Bautizo", "Primera Comunión", "Confirmación", "Matrimonio" });
             cb_filtro_sac.SelectedItem = "Todos";
 
-            Label lblFecOf = new Label() { Text = "Fecha Oficial:\n(DD/MM/AAAA)", Font = FuentePx(12.5f, FontStyle.Bold), AutoSize = true };
-            TextBox txt_filtro_fec = new TextBox() { Width = 105 };
-            this.adjuntar_validacion(txt_filtro_fec, "fecha");
+            Label lblMes = new Label() { Text = "Mes:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            ComboBox cb_mes = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 80, Font = FuentePx(13.5f) };
+            cb_mes.Items.AddRange(new string[] { "Todos", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12" });
+            cb_mes.SelectedItem = "Todos";
+
+            Label lblAnio = new Label() { Text = "Año:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            TextBox txt_anio = new TextBox() { Width = 70 };
+            AsignarPlaceholder(txt_anio, "Ej: 2026");
+            this.adjuntar_validacion(txt_anio, "anio");
+
+            Label lblCriterio = new Label() { Text = "Buscar por:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
+            ComboBox cb_criterio = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 110, Font = FuentePx(13.5f) };
+            cb_criterio.Items.AddRange(new string[] { "Todos", "DNI", "Apellidos" });
+            cb_criterio.SelectedItem = "Todos";
+
+            TextBox txt_bus_dni = new TextBox() { Width = 170, Visible = false };
+            AsignarPlaceholder(txt_bus_dni, "8 dígitos del DNI");
+            this.adjuntar_validacion(txt_bus_dni, "dni");
+
+            TextBox txt_bus_ape = new TextBox() { Width = 220, Visible = false };
+            AsignarPlaceholder(txt_bus_ape, "SOLO LETRAS");
+            this.adjuntar_validacion(txt_bus_ape, "texto");
 
             Label lblOrd = new Label() { Text = "Ordenar:", Font = FuentePx(13.5f, FontStyle.Bold), AutoSize = true };
             ComboBox cb_orden = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145, Font = FuentePx(13.5f) };
             cb_orden.Items.AddRange(new string[] { "Ascendente (A-Z)", "Descendente (Z-A)" });
             cb_orden.SelectedItem = "Ascendente (A-Z)";
 
-            Button btnFiltrar = CrearBotonAccion("Aplicar Filtros", ColorTranslator.FromHtml("#2563eb"), new Point(740, 14), new Size(135, 36));
+            Button btnFiltrar = CrearBotonAccion("Aplicar Filtros", ColorTranslator.FromHtml("#2563eb"), new Point(0, 0), new Size(135, 36));
 
-            f_filtros.Controls.AddRange(new Control[] { lblSac, cb_filtro_sac, lblFecOf, txt_filtro_fec, lblOrd, cb_orden, btnFiltrar });
+            f_filtros.Controls.AddRange(new Control[] { lblSac, cb_filtro_sac, lblMes, cb_mes, lblAnio, txt_anio, lblCriterio, cb_criterio, txt_bus_dni, txt_bus_ape, lblOrd, cb_orden, btnFiltrar });
             this.content_frame.Controls.Add(f_filtros);
 
-            DataGridView tabla = new DataGridView() { Location = new Point(25, f_filtros.Bottom + 12), Size = new Size(f_filtros.Width, 420) };
+            DataGridView tabla = new DataGridView() { Location = new Point(25, f_filtros.Bottom + 12), Size = new Size(f_filtros.Width, 386) };
             this.ConfigurarTablaResponsiva(tabla);
             tabla.Columns.Add("colTit", "Titular(es)");
             tabla.Columns.Add("colSac", "Sacramento");
@@ -2692,32 +2761,73 @@ namespace SIGEP_App
                 f_filtros.Width = anchoDisp;
                 tabla.Size = new Size(anchoDisp, altoDisp);
 
-                cb_filtro_sac.Location = new Point(lblSac.Right + 8, 18);
-                lblFecOf.Location = new Point(cb_filtro_sac.Right + 16, 13);
-                txt_filtro_fec.Location = new Point(lblFecOf.Right + 8, 19);
-                lblOrd.Location = new Point(txt_filtro_fec.Right + 16, 22);
-                cb_orden.Location = new Point(lblOrd.Right + 8, 18);
-                btnFiltrar.Location = new Point(cb_orden.Right + 16, 14);
+                cb_filtro_sac.Location = new Point(lblSac.Right + 8, 14);
+                lblMes.Location = new Point(cb_filtro_sac.Right + 16, 18);
+                cb_mes.Location = new Point(lblMes.Right + 8, 14);
+                lblAnio.Location = new Point(cb_mes.Right + 16, 18);
+                txt_anio.Location = new Point(lblAnio.Right + 8, 14);
 
+                lblCriterio.Location = new Point(15, 58);
+                cb_criterio.Location = new Point(lblCriterio.Right + 8, 54);
+                txt_bus_dni.Location = new Point(cb_criterio.Right + 8, 54);
+                txt_bus_ape.Location = new Point(cb_criterio.Right + 8, 54);
+
+                int derechaCaja = cb_criterio.Right;
+                if (cb_criterio.SelectedItem.ToString() == "DNI") derechaCaja = txt_bus_dni.Right;
+                else if (cb_criterio.SelectedItem.ToString() == "Apellidos") derechaCaja = txt_bus_ape.Right;
+
+                lblOrd.Location = new Point(derechaCaja + 16, 58);
+                cb_orden.Location = new Point(lblOrd.Right + 8, 54);
+
+                btnFiltrar.Location = new Point(cb_orden.Right + 20, 52);
                 btnExportar.Location = new Point(25 + (anchoDisp - btnExportar.Width) / 2, tabla.Bottom + 15);
+
                 f_filtros.Invalidate();
             };
 
             this.content_frame.Resize += (s, e) => ajustarDisenoReportes();
+
+            cb_criterio.SelectedIndexChanged += (s, e) =>
+            {
+                string modo = cb_criterio.SelectedItem.ToString();
+                txt_bus_dni.Visible = (modo == "DNI");
+                txt_bus_ape.Visible = (modo == "Apellidos");
+                txt_bus_dni.Text = "";
+                txt_bus_ape.Text = "";
+                ajustarDisenoReportes();
+            };
+
             ajustarDisenoReportes();
 
             Action<bool> actualizar_tabla = (validarFiltro) =>
             {
-                string f_fec = txt_filtro_fec.Text.Trim();
-                if (validarFiltro && f_fec != "")
+                string f_sac = cb_filtro_sac.SelectedItem.ToString();
+                string f_mes = cb_mes.SelectedItem.ToString();
+                string f_anio = txt_anio.Text.Trim();
+                string f_criterio = cb_criterio.SelectedItem.ToString();
+                string f_bus_dni = txt_bus_dni.Text.Trim();
+                string f_bus_ape = BaseDatos.NormalizarSinTildes(txt_bus_ape.Text.Trim());
+
+                if (validarFiltro)
                 {
-                    DateTime dtFiltro;
-                    if (f_fec.Length != 10 || !DateTime.TryParseExact(f_fec, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out dtFiltro))
+                    if (f_anio != "" && f_anio.Length < 4)
                     {
-                        MessageBox.Show("La Fecha Oficial ingresada en el filtro no es válida. Ingrese una fecha real con formato DD/MM/AAAA o deje el campo vacío.", "Fecha de Filtro Inválida", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("El Año debe tener exactamente 4 dígitos para realizar la búsqueda.", "Filtro Inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    if (f_criterio == "DNI" && f_bus_dni != "" && f_bus_dni.Length != 8)
+                    {
+                        MessageBox.Show("El DNI ingresado en la búsqueda debe tener exactamente 8 dígitos.", "Filtro Inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    if (f_criterio == "Apellidos" && f_bus_ape != "" && f_bus_ape.Length < 2)
+                    {
+                        MessageBox.Show("Ingrese un Apellido válido (mínimo 2 letras) para buscar.", "Filtro Inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                 }
+
+                bool filtros_activos = (f_sac != "Todos" || f_mes != "Todos" || f_anio != "" || (f_criterio == "DNI" && f_bus_dni != "") || (f_criterio == "Apellidos" && f_bus_ape != ""));
 
                 tabla.Rows.Clear();
 
@@ -2730,7 +2840,7 @@ namespace SIGEP_App
                     this.db.ordenar_selection_desc();
                 }
 
-                string f_sac = cb_filtro_sac.SelectedItem.ToString();
+                int countMostrados = 0;
 
                 for (int i = 0; i < this.db.total_registros; i++)
                 {
@@ -2738,9 +2848,38 @@ namespace SIGEP_App
                     {
                         continue;
                     }
-                    if (f_fec != "" && this.db.fechas_sac[i] != f_fec)
+
+                    if (f_mes != "Todos" || f_anio != "")
                     {
-                        continue;
+                        string fecha = this.db.fechas_sac[i];
+                        if (fecha == "Por Programar" || fecha == "") continue;
+
+                        string[] partes = fecha.Split('/');
+                        if (partes.Length == 3)
+                        {
+                            if (f_mes != "Todos" && partes[1] != f_mes) continue;
+                            if (f_anio != "" && partes[2] != f_anio) continue;
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (f_criterio == "DNI" && f_bus_dni != "")
+                    {
+                        if (this.db.dnis_prin[i] != f_bus_dni && this.db.dnis_sec[i] != f_bus_dni) continue;
+                    }
+                    else if (f_criterio == "Apellidos" && f_bus_ape != "")
+                    {
+                        string ape1Norm = BaseDatos.NormalizarSinTildes(this.db.apellidos[i]);
+                        string ape2Norm = BaseDatos.NormalizarSinTildes(this.db.apellidos_sec[i]);
+                        if (!ape1Norm.Contains(f_bus_ape) && !ape2Norm.Contains(f_bus_ape)) continue;
+                    }
+
+                    if (!filtros_activos && countMostrados >= 7)
+                    {
+                        break;
                     }
 
                     string nombre_display = this.db.ObtenerNombreCompletoTitular(i);
@@ -2754,6 +2893,7 @@ namespace SIGEP_App
                     string texto_deuda = (deuda_val != "0" && deuda_val != "") ? ("S/ " + deuda_val) : "No tiene deuda";
 
                     int rowIdx = tabla.Rows.Add(nombre_display, this.db.tipos[i], this.db.fechas_sac[i], texto_est, texto_deuda);
+                    countMostrados++;
 
                     if (this.db.estados[i] == "Finalizado")
                     {
@@ -2780,6 +2920,10 @@ namespace SIGEP_App
             };
 
             btnFiltrar.Click += (s, e) => actualizar_tabla(true);
+            txt_bus_dni.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; actualizar_tabla(true); } };
+            txt_bus_ape.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; actualizar_tabla(true); } };
+            txt_anio.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; actualizar_tabla(true); } };
+
             actualizar_tabla(false);
 
             btnExportar.Click += (s, e) =>
@@ -2791,31 +2935,52 @@ namespace SIGEP_App
                 }
 
                 string f_sac = cb_filtro_sac.SelectedItem.ToString();
-                string f_fec = txt_filtro_fec.Text.Trim();
+                string f_mes = cb_mes.SelectedItem.ToString();
+                string f_anio = txt_anio.Text.Trim();
+                string f_criterio = cb_criterio.SelectedItem.ToString();
+                string f_bus_dni = txt_bus_dni.Text.Trim();
+                string f_bus_ape = BaseDatos.NormalizarSinTildes(txt_bus_ape.Text.Trim());
 
-                if (f_fec != "")
+                if (f_anio != "" && f_anio.Length < 4)
                 {
-                    DateTime dtFiltro;
-                    if (f_fec.Length != 10 || !DateTime.TryParseExact(f_fec, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out dtFiltro))
-                    {
-                        MessageBox.Show("La Fecha Oficial ingresada en el filtro no es válida. Corríjala antes de exportar.", "Fecha Inválida", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
+                    MessageBox.Show("El Año debe tener 4 dígitos para exportar el reporte correctamente.", "Filtro Inválido", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
+
+                bool filtros_activos = (f_sac != "Todos" || f_mes != "Todos" || f_anio != "" || (f_criterio == "DNI" && f_bus_dni != "") || (f_criterio == "Apellidos" && f_bus_ape != ""));
 
                 ItemReporte[] filtrados = new ItemReporte[this.db.total_registros];
                 int cantFiltrados = 0;
 
                 for (int i = 0; i < this.db.total_registros; i++)
                 {
-                    if (f_sac != "Todos" && this.db.tipos[i] != f_sac)
+                    if (f_sac != "Todos" && this.db.tipos[i] != f_sac) continue;
+
+                    if (f_mes != "Todos" || f_anio != "")
                     {
-                        continue;
+                        string fecha = this.db.fechas_sac[i];
+                        if (fecha == "Por Programar" || fecha == "") continue;
+                        string[] partes = fecha.Split('/');
+                        if (partes.Length == 3)
+                        {
+                            if (f_mes != "Todos" && partes[1] != f_mes) continue;
+                            if (f_anio != "" && partes[2] != f_anio) continue;
+                        }
+                        else continue;
                     }
-                    if (f_fec != "" && this.db.fechas_sac[i] != f_fec)
+
+                    if (f_criterio == "DNI" && f_bus_dni != "")
                     {
-                        continue;
+                        if (this.db.dnis_prin[i] != f_bus_dni && this.db.dnis_sec[i] != f_bus_dni) continue;
                     }
+                    else if (f_criterio == "Apellidos" && f_bus_ape != "")
+                    {
+                        string ape1Norm = BaseDatos.NormalizarSinTildes(this.db.apellidos[i]);
+                        string ape2Norm = BaseDatos.NormalizarSinTildes(this.db.apellidos_sec[i]);
+                        if (!ape1Norm.Contains(f_bus_ape) && !ape2Norm.Contains(f_bus_ape)) continue;
+                    }
+
+                    if (!filtros_activos && cantFiltrados >= 7) break;
 
                     string nom = this.db.ObtenerNombreCompletoTitular(i);
                     if (this.db.tipos[i] == "Matrimonio" && this.db.ObtenerNombreCompletoConyuge(i) != "")
